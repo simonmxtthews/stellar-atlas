@@ -8,9 +8,16 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "noEmit": true,
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo"
   },
-  "include": ["vite.config.ts", "playwright.config.ts", "tests/e2e"]
+  "include": [
+    "vite.config.ts",
+    "playwright.config.ts",
+    "scripts",
+    "tests/e2e",
+    "tests/unit/pipeline"
+  ]
 }

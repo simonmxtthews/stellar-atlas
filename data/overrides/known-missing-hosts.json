@@ -1,0 +1,4 @@
+{
+  "$comment": "Planet hosts within 30 ly confirmed absent from HYG, so the host gate lets the build add them from archive coordinates.",
+  "knownMissingHosts": ["Teegarden's Star"]
+}

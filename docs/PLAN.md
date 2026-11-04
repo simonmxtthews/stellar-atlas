@@ -322,9 +322,9 @@ Each milestone is done when every box below is ticked, tests pass and lint is cl
 
 **M1 — Data pipeline**
 
-- [ ] `npm run data` produces `stars.json`, `systems.json`, `planets.json`, `meta.json` that pass zod validation
-- [ ] Coordinate, spectral and cross-match unit tests pass
-- [ ] Build log reports star, system and planet counts plus unmatched hosts
+- [x] `npm run data` produces `stars.json`, `systems.json`, `planets.json`, `meta.json` that pass zod validation
+- [x] Coordinate, spectral and cross-match unit tests pass
+- [x] Build log reports star, system and planet counts plus unmatched hosts
 
 **M2 — 3D map**
 

@@ -1,0 +1,127 @@
+{
+  "$comment": "Nearby objects HYG lacks. Positions, parallaxes and spectral types from SIMBAD, queried 2026-11-04; Luhman 16 A/B use the system parallax, eps Ind Ba/Bb and SCR 1845 B their system's.",
+  "additions": [
+    {
+      "slug": "luhman-16-a",
+      "proper": "Luhman 16 A",
+      "other": ["WISE J104915.57-531906.1 A", "Luhman 16"],
+      "raDeg": 162.308433,
+      "decDeg": -53.318057,
+      "parallaxMas": 501.557,
+      "spect": "L7.5"
+    },
+    {
+      "slug": "luhman-16-b",
+      "proper": "Luhman 16 B",
+      "other": ["WISE J104915.57-531906.1 B"],
+      "raDeg": 162.308644,
+      "decDeg": -53.318278,
+      "parallaxMas": 501.557,
+      "spect": "T0.5"
+    },
+    {
+      "slug": "wise-0855-0714",
+      "proper": "WISE 0855-0714",
+      "other": ["WISE J085510.83-071442.5"],
+      "raDeg": 133.818908,
+      "decDeg": -7.247048,
+      "parallaxMas": 439.0,
+      "spect": "Y2"
+    },
+    {
+      "slug": "eps-ind-ba",
+      "proper": "Epsilon Indi Ba",
+      "raDeg": 331.044147,
+      "decDeg": -56.782844,
+      "parallaxMas": 270.658,
+      "spect": "T1V"
+    },
+    {
+      "slug": "eps-ind-bb",
+      "proper": "Epsilon Indi Bb",
+      "raDeg": 331.044147,
+      "decDeg": -56.782844,
+      "parallaxMas": 270.658,
+      "spect": "T6V"
+    },
+    {
+      "slug": "scr-1845-6357-a",
+      "proper": "SCR 1845-6357 A",
+      "other": ["SCR J1845-6357"],
+      "raDeg": 281.271889,
+      "decDeg": -63.963181,
+      "parallaxMas": 249.6651,
+      "spect": "M8.5V"
+    },
+    {
+      "slug": "scr-1845-6357-b",
+      "proper": "SCR 1845-6357 B",
+      "raDeg": 281.2719,
+      "decDeg": -63.96328,
+      "parallaxMas": 249.6651,
+      "spect": "T6"
+    },
+    {
+      "slug": "denis-1048-3956",
+      "proper": "DENIS 1048-3956",
+      "other": ["DENIS J1048.0-3956", "DENIS J104814.6-395606"],
+      "raDeg": 162.060723,
+      "decDeg": -39.935234,
+      "parallaxMas": 247.2156,
+      "spect": "M8.5Ve"
+    },
+    {
+      "slug": "ugps-0722-0540",
+      "proper": "UGPS 0722-0540",
+      "other": ["UGPS J072227.51-054031.2", "WISE J072227.27-054029.9"],
+      "raDeg": 110.616275,
+      "decDeg": -5.675994,
+      "parallaxMas": 242.8,
+      "spect": "T9"
+    },
+    {
+      "slug": "wise-1639-6847",
+      "proper": "WISE 1639-6847",
+      "other": ["WISE J163940.83-684738.6"],
+      "raDeg": 249.920156,
+      "decDeg": -68.794066,
+      "parallaxMas": 202.3,
+      "spect": "Y0pec"
+    },
+    {
+      "slug": "2mass-0415-0935",
+      "proper": "2MASS 0415-0935",
+      "other": ["2MASS J04151954-0935066"],
+      "raDeg": 63.831432,
+      "decDeg": -9.585187,
+      "parallaxMas": 174.34,
+      "spect": "T8"
+    },
+    {
+      "slug": "wise-1541-2250",
+      "proper": "WISE 1541-2250",
+      "other": ["WISE J154151.65-225024.9"],
+      "raDeg": 235.467871,
+      "decDeg": -22.840196,
+      "parallaxMas": 166.9,
+      "spect": "Y0"
+    },
+    {
+      "slug": "lp-944-20",
+      "proper": "LP 944-20",
+      "raDeg": 54.896885,
+      "decDeg": -35.428789,
+      "parallaxMas": 155.5982,
+      "spect": "M9.5Ve"
+    },
+    {
+      "slug": "scholz-star",
+      "proper": "Scholz's Star",
+      "other": ["WISE J072003.20-084651.2"],
+      "raDeg": 110.013557,
+      "decDeg": -8.780529,
+      "parallaxMas": 148.8,
+      "spect": "M9.5"
+    }
+  ]
+}

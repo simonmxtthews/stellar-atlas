@@ -1,0 +1,262 @@
+{
+  "buildDate": "2026-11-04T23:08:44.559Z",
+  "radiusLy": 100,
+  "sources": [
+    {
+      "name": "HYG Database",
+      "version": "v4.2",
+      "url": "https://codeberg.org/astronexus/hyg/media/commit/f3b7a9f0a756a55a0d1ddba5507f4750ab7a0bfa/data/hyg/OLDER/hyg_v42.csv.gz",
+      "licence": "CC BY-SA 4.0",
+      "sha256": "5ca9431ff364c8002a4a3efa91b2b9296746aea1543374db4cb6b4fab049d601",
+      "fetchedAt": "2026-11-04T23:03:46.417Z"
+    },
+    {
+      "name": "NASA Exoplanet Archive (pscomppars)",
+      "version": "2026-11-04",
+      "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync",
+      "licence": "Public; acknowledgement requested",
+      "fetchedAt": "2026-11-04T23:08:42.283Z"
+    }
+  ],
+  "counts": {
+    "stars": 4132,
+    "systems": 3701,
+    "planets": 541
+  },
+  "unmatchedHosts": [
+    {
+      "hostname": "Teegarden's Star",
+      "distLy": 12.49
+    },
+    {
+      "hostname": "WISEP J121756.91+162640.2 A",
+      "distLy": 32.94
+    },
+    {
+      "hostname": "L 98-59",
+      "distLy": 34.64
+    },
+    {
+      "hostname": "COCONUTS-2 A",
+      "distLy": 35.51
+    },
+    {
+      "hostname": "TRAPPIST-1",
+      "distLy": 40.54
+    },
+    {
+      "hostname": "LHS 475",
+      "distLy": 40.71
+    },
+    {
+      "hostname": "VHS J125601.92-125723.9",
+      "distLy": 41.42
+    },
+    {
+      "hostname": "TOI-540",
+      "distLy": 45.67
+    },
+    {
+      "hostname": "CWISEP J193518.59-154620.3",
+      "distLy": 47.06
+    },
+    {
+      "hostname": "LHS 3844",
+      "distLy": 48.55
+    },
+    {
+      "hostname": "TYC 2187-512-1",
+      "distLy": 50.47
+    },
+    {
+      "hostname": "LHS 3154",
+      "distLy": 51.4
+    },
+    {
+      "hostname": "G 264-012",
+      "distLy": 52.21
+    },
+    {
+      "hostname": "LSPM J2116+0234",
+      "distLy": 57.5
+    },
+    {
+      "hostname": "LHS 1478",
+      "distLy": 59.45
+    },
+    {
+      "hostname": "TOI-5388",
+      "distLy": 60.41
+    },
+    {
+      "hostname": "TOI-6716",
+      "distLy": 61.6
+    },
+    {
+      "hostname": "WD 0806-661",
+      "distLy": 62.77
+    },
+    {
+      "hostname": "LHS 1678",
+      "distLy": 64.83
+    },
+    {
+      "hostname": "TOI-6255",
+      "distLy": 66.26
+    },
+    {
+      "hostname": "TOI-6324",
+      "distLy": 67.02
+    },
+    {
+      "hostname": "DENIS-P J082303.1-491201",
+      "distLy": 67.74
+    },
+    {
+      "hostname": "TOI-6662",
+      "distLy": 69.09
+    },
+    {
+      "hostname": "RR Cae",
+      "distLy": 69.12
+    },
+    {
+      "hostname": "G 196-3",
+      "distLy": 71.07
+    },
+    {
+      "hostname": "K2-415",
+      "distLy": 71.16
+    },
+    {
+      "hostname": "LTT 3780",
+      "distLy": 71.69
+    },
+    {
+      "hostname": "TOI-244",
+      "distLy": 71.86
+    },
+    {
+      "hostname": "TOI-1450 A",
+      "distLy": 73.21
+    },
+    {
+      "hostname": "TOI-270",
+      "distLy": 73.32
+    },
+    {
+      "hostname": "TOI-4336 A",
+      "distLy": 73.53
+    },
+    {
+      "hostname": "TOI-2267 A",
+      "distLy": 73.55
+    },
+    {
+      "hostname": "TOI-2267 B",
+      "distLy": 73.55
+    },
+    {
+      "hostname": "TOI-2134",
+      "distLy": 73.78
+    },
+    {
+      "hostname": "CFBDSIR J145829+101343",
+      "distLy": 75.34
+    },
+    {
+      "hostname": "TOI-6008",
+      "distLy": 75.34
+    },
+    {
+      "hostname": "WD 1856+534",
+      "distLy": 80.68
+    },
+    {
+      "hostname": "TOI-1468",
+      "distLy": 80.69
+    },
+    {
+      "hostname": "TOI-771",
+      "distLy": 82.45
+    },
+    {
+      "hostname": "TOI-1080",
+      "distLy": 83.36
+    },
+    {
+      "hostname": "TOI-912",
+      "distLy": 85.15
+    },
+    {
+      "hostname": "LP 791-18",
+      "distLy": 86.41
+    },
+    {
+      "hostname": "TOI-776",
+      "distLy": 88.62
+    },
+    {
+      "hostname": "TOI-4552",
+      "distLy": 88.94
+    },
+    {
+      "hostname": "TOI-836",
+      "distLy": 89.7
+    },
+    {
+      "hostname": "TOI-1231",
+      "distLy": 90.09
+    },
+    {
+      "hostname": "K2-129",
+      "distLy": 90.66
+    },
+    {
+      "hostname": "TOI-5799",
+      "distLy": 90.71
+    },
+    {
+      "hostname": "G 9-40",
+      "distLy": 91.09
+    },
+    {
+      "hostname": "TOI-4616",
+      "distLy": 91.66
+    },
+    {
+      "hostname": "TOI-4529",
+      "distLy": 92.58
+    },
+    {
+      "hostname": "TOI-2427",
+      "distLy": 93
+    },
+    {
+      "hostname": "Wolf 327",
+      "distLy": 93.06
+    },
+    {
+      "hostname": "HD 46375",
+      "distLy": 96.39
+    },
+    {
+      "hostname": "TOI-4438",
+      "distLy": 97.96
+    },
+    {
+      "hostname": "HD 75302",
+      "distLy": 98.92
+    },
+    {
+      "hostname": "TOI-1452",
+      "distLy": 99.55
+    },
+    {
+      "hostname": "DE CVn",
+      "distLy": 99.55
+    }
+  ],
+  "attribution": "Star data from the HYG Database by David Nash (astronexus.com/hyg), licensed CC BY-SA 4.0. This research has made use of the NASA Exoplanet Archive, which is operated by the California Institute of Technology, under contract with NASA under the Exoplanet Exploration Program. Hand-curated nearby objects use values from SIMBAD (CDS, Strasbourg). The derived catalogue is distributed under CC BY-SA 4.0.",
+  "idMap": {}
+}

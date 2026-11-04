@@ -4,16 +4,18 @@ Static, local-first web app that maps every known star system near the Sun in tr
 
 ## Commands
 
-| Command           | What it does                                           |
-| ----------------- | ------------------------------------------------------ |
-| `npm run data`    | Bake the catalogue into `public/data/` (arrives in M1) |
-| `npm run dev`     | Start the Vite dev server                              |
-| `npm run build`   | Type-check and build to `dist/`                        |
-| `npm run preview` | Serve the built `dist/` locally                        |
-| `npm test`        | Run Vitest unit tests                                  |
-| `npm run e2e`     | Build, then run Playwright smoke tests                 |
-| `npm run lint`    | Run ESLint and check Prettier formatting               |
-| `npm run format`  | Apply Prettier formatting                              |
+| Command           | What it does                             |
+| ----------------- | ---------------------------------------- |
+| `npm run data`    | Bake the catalogue into `public/data/`   |
+| `npm run dev`     | Start the Vite dev server                |
+| `npm run build`   | Type-check and build to `dist/`          |
+| `npm run preview` | Serve the built `dist/` locally          |
+| `npm test`        | Run Vitest unit tests                    |
+| `npm run e2e`     | Build, then run Playwright smoke tests   |
+| `npm run lint`    | Run ESLint and check Prettier formatting |
+| `npm run format`  | Apply Prettier formatting                |
+
+`npm run data -- --offline` rebuilds from `data/raw/` without re-querying the archive.
 
 Use Node 22.22.2 or newer on the 22.x line (`.nvmrc`); `nvm install` picks it up. Node 23 is unsupported, and npm silently resolves older, vulnerable tool versions under it. Run `npx playwright install chromium` once before the first `npm run e2e`.
 

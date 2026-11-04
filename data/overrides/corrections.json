@@ -1,0 +1,12 @@
+{
+  "$comment": "Fixes to HYG records, keyed by HYG ID. Spectral types for Struve 2398 (HYG: K5) and Capella (HYG: M1) from SIMBAD.",
+  "corrections": [
+    { "id": "hyg:0", "other": ["Sun"] },
+    { "id": "hyg:49767", "proper": "Groombridge 1618" },
+    { "id": "hyg:118079", "proper": "Luyten 726-8 A", "other": ["BL Cet"] },
+    { "id": "hyg:118080", "proper": "Luyten 726-8 B", "other": ["UV Cet"] },
+    { "id": "hyg:24549", "spect": "G3III" },
+    { "id": "hyg:91484", "spect": "M3V" },
+    { "id": "hyg:91487", "spect": "M3.5V" }
+  ]
+}
