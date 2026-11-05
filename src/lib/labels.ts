@@ -1,16 +1,36 @@
 import type { Matrix4Tuple } from 'three';
 
 export const MAX_LABELS = 150;
-export const LABEL_PX = 12;
-export const SELECTED_LABEL_PX = 14;
-export const LABEL_GAP_EM = 1.1; // clear of the star sprite
-export const SELECTED_LABEL_GAP_EM = 2.2; // clear of the selection ring
+export const MAX_UNNAMED_LABELS = 25; // catalogue numbers, the bulk of the clutter
+const LABEL_GAP_PX = 13; // clear of the star sprite
+const SELECTED_LABEL_GAP_PX = 31; // clear of the selection ring
 
 const CHAR_WIDTH_EM = 0.55; // average, as text isn't typeset until it is shown
 
 // Lower ranks first: selected > route endpoints > tagged > proper-named > everything else.
 export const LabelTier = { Selected: 0, RouteEndpoint: 1, Tagged: 2, Proper: 3, Other: 4 } as const;
 export type LabelTier = (typeof LabelTier)[keyof typeof LabelTier];
+
+export interface LabelStyle {
+  readonly px: number;
+  readonly gapEm: number;
+  readonly color: string;
+}
+
+// The author's own stars stand out; the catalogue recedes, names ahead of numbers.
+export function labelStyle(tier: LabelTier): LabelStyle {
+  switch (tier) {
+    case LabelTier.Selected:
+      return { px: 14, gapEm: SELECTED_LABEL_GAP_PX / 14, color: '#e0f2fe' };
+    case LabelTier.RouteEndpoint:
+    case LabelTier.Tagged:
+      return { px: 12, gapEm: LABEL_GAP_PX / 12, color: '#cbd5e1' };
+    case LabelTier.Proper:
+      return { px: 11, gapEm: LABEL_GAP_PX / 11, color: '#8494a9' };
+    case LabelTier.Other:
+      return { px: 10, gapEm: LABEL_GAP_PX / 10, color: '#566479' };
+  }
+}
 
 export interface LabelCandidate {
   readonly id: string;
@@ -34,7 +54,8 @@ interface LabelBox {
   readonly bottom: number;
 }
 
-// Labels ranked by tier, then nearest to the camera, capped at maxLabels. A label that would
+// Labels ranked by tier, then nearest to the camera, capped at maxLabels and, for those with only
+// a catalogue number, at MAX_UNNAMED_LABELS. A label that would
 // overlap a higher-ranked one, or that falls off-screen, gives up its place. Selected labels are
 // forced: they ignore the cap, the frustum and overlaps. m is the column-major view-projection
 // matrix.
@@ -57,12 +78,15 @@ export function chooseLabels<T extends LabelCandidate>(
 
   const chosen: T[] = [];
   const placed: LabelBox[] = [];
+  let unnamed = 0;
   for (const { candidate } of ranked) {
     const forced = candidate.tier === LabelTier.Selected;
     if (!forced && chosen.length >= maxLabels) break;
+    if (candidate.tier === LabelTier.Other && unnamed >= MAX_UNNAMED_LABELS) break;
     const box = labelBox(candidate, m, viewport);
     if (!forced && (!box || placed.some((other) => overlaps(box, other)))) continue;
     chosen.push(candidate);
+    if (candidate.tier === LabelTier.Other) unnamed++;
     if (box) placed.push(box);
   }
   return chosen;
@@ -79,10 +103,8 @@ function labelBox(
   const ndcX = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
   const ndcY = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
   if (Math.abs(ndcX) > 1 || Math.abs(ndcY) > 1) return null;
-  const selected = tier === LabelTier.Selected;
-  const px = selected ? SELECTED_LABEL_PX : LABEL_PX;
-  const left =
-    ((ndcX + 1) / 2) * viewport.width + (selected ? SELECTED_LABEL_GAP_EM : LABEL_GAP_EM) * px;
+  const { px, gapEm } = labelStyle(tier);
+  const left = ((ndcX + 1) / 2) * viewport.width + gapEm * px;
   const middle = ((1 - ndcY) / 2) * viewport.height;
   return {
     left,

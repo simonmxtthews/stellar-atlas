@@ -4,16 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { memo, useEffect, useMemo, useRef } from 'react';
 import { MathUtils, Matrix4, MeshBasicMaterial, type Group } from 'three';
 import { CAMERA_FOV } from '../lib/camera';
-import {
-  chooseLabels,
-  LABEL_GAP_EM,
-  LABEL_PX,
-  LabelTier,
-  labelText,
-  SELECTED_LABEL_GAP_EM,
-  SELECTED_LABEL_PX,
-  type LabelCandidate,
-} from '../lib/labels';
+import { chooseLabels, LabelTier, labelStyle, labelText, type LabelCandidate } from '../lib/labels';
 import { galacticToScene } from '../lib/coords';
 import { distanceLy, routeLegs, type RouteLeg } from '../lib/routes';
 import { formatTravelTime, legTravelTime } from '../lib/travel';
@@ -274,17 +265,17 @@ export function Labels({
   useEffect(() => setLabelCount(labels.length), [labels, setLabelCount]);
 
   return labels.map((label) => {
-    const selected = label.tier === LabelTier.Selected;
+    const { px, gapEm, color } = labelStyle(label.tier);
     return (
       <ScreenText
         key={label.id}
         x={label.x}
         y={label.y}
         z={label.z}
-        px={selected ? SELECTED_LABEL_PX : LABEL_PX}
-        offset={[selected ? SELECTED_LABEL_GAP_EM : LABEL_GAP_EM, 0]}
+        px={px}
+        offset={[gapEm, 0]}
         text={label.text}
-        color={label.color ?? (selected ? '#e0f2fe' : '#94a3b8')}
+        color={label.color ?? color}
         material={material}
       />
     );

@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   chooseLabels,
   LabelTier,
+  labelStyle,
   labelText,
   MAX_LABELS,
+  MAX_UNNAMED_LABELS,
   type LabelCandidate,
 } from '../../../src/lib/labels';
 
@@ -55,12 +57,34 @@ describe('chooseLabels', () => {
   });
 
   it('caps the count, keeping the highest priorities', () => {
-    const others = Array.from({ length: 400 }, (_, i) =>
+    const named = Array.from({ length: 400 }, (_, i) =>
+      candidate(`n${i}`, LabelTier.Proper, 0, i / 10),
+    );
+    const labels = choose([...named, candidate('tagged', LabelTier.Tagged, 0, 0, 10)]);
+    expect(labels).toHaveLength(MAX_LABELS);
+    expect(labels[0]?.id).toBe('tagged');
+  });
+
+  it('limits labels with only a catalogue number, leaving named ones alone', () => {
+    const others = Array.from({ length: 100 }, (_, i) =>
       candidate(`o${i}`, LabelTier.Other, 0, i / 10),
     );
-    const labels = choose([...others, candidate('proper', LabelTier.Proper, 0, 0, 10)]);
-    expect(labels).toHaveLength(MAX_LABELS);
-    expect(labels[0]?.id).toBe('proper');
+    const named = Array.from({ length: 40 }, (_, i) =>
+      candidate(`n${i}`, LabelTier.Proper, 0, i / 10, 10),
+    );
+    const labels = choose([...others, ...named]);
+    expect(labels.filter((label) => label.tier === LabelTier.Proper)).toHaveLength(40);
+    expect(labels.filter((label) => label.tier === LabelTier.Other)).toHaveLength(
+      MAX_UNNAMED_LABELS,
+    );
+  });
+
+  it('makes catalogue numbers quieter than names, and names quieter than the author stars', () => {
+    const sizes = [LabelTier.Other, LabelTier.Proper, LabelTier.Tagged, LabelTier.Selected].map(
+      (tier) => labelStyle(tier).px,
+    );
+    expect(sizes).toEqual([...sizes].sort((a, b) => a - b));
+    expect(new Set(sizes).size).toBe(sizes.length);
   });
 
   it('never drops a selected label, even past the cap', () => {
