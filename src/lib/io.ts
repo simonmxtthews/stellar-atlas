@@ -112,12 +112,16 @@ export function serialiseWorld(world: World): string {
   return `${JSON.stringify(sortKeys(world), null, 2)}\n`;
 }
 
-export function exportFileName(world: World, date: Date): string {
+export function worldFileName(prefix: string, extension: string, world: World, date: Date): string {
   const slug = world.name
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
-  return `world-${slug || 'untitled'}-${date.toISOString().slice(0, 10)}.json`;
+  return `${prefix}-${slug || 'untitled'}-${date.toISOString().slice(0, 10)}.${extension}`;
+}
+
+export function exportFileName(world: World, date: Date): string {
+  return worldFileName('world', 'json', world, date);
 }
 
 function mergeMeta(ours: StarMeta | undefined, theirs: StarMeta): StarMeta {

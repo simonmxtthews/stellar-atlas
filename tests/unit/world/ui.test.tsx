@@ -8,7 +8,7 @@ import { useUi } from '../../../src/store/ui';
 import { newWorld, useWorld } from '../../../src/store/world';
 import { StarWorldSection } from '../../../src/ui/StarWorldSection';
 import { Toolbar } from '../../../src/ui/Toolbar';
-import { noProbes, sol, starOf, systemOf } from '../map/fixtures';
+import { noProbes, sol, starOf, systemOf, testMeta } from '../map/fixtures';
 
 const alpha = starOf({ id: 'a', displayName: 'Alpha', pos: [3, 4, 0], distLy: 5 });
 const beta = starOf({ id: 'b', displayName: 'Beta', pos: [3, 4, 12], distLy: 13 });
@@ -21,6 +21,7 @@ const catalogue: Catalogue = {
   starIndexById: new Map(stars.map((star, i) => [star.id, i])),
   systemsById: new Map(systems.map((system) => [system.id, system])),
   planetsById: new Map(),
+  meta: testMeta,
   probeData: noProbes,
 };
 const [solId, alphaId, betaId] = systems.map((system) => system.id) as [string, string, string];

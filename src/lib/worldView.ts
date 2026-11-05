@@ -1,5 +1,5 @@
 import type { Star, StarSystem } from '../types/catalogue';
-import type { Route, StarMeta, Tag } from '../types/world';
+import type { Region, Route, StarMeta, Tag } from '../types/world';
 
 type StarMetaById = Readonly<Record<string, StarMeta>>;
 
@@ -18,6 +18,16 @@ export function systemCustomName(meta: StarMetaById, system: StarSystem): string
 
 export function withCustomName(realName: string, customName: string | undefined): string {
   return customName ? `${customName} (${realName})` : realName;
+}
+
+export function systemLabel(
+  meta: StarMetaById,
+  systemsById: ReadonlyMap<string, StarSystem>,
+  id: string,
+): string {
+  const system = systemsById.get(id);
+  if (!system) return `${id} (not in the catalogue)`;
+  return withCustomName(system.name, systemCustomName(meta, system));
 }
 
 export function taggedStarIds(meta: StarMetaById): ReadonlySet<string> {
@@ -55,4 +65,13 @@ export function starHalos(meta: StarMetaById, tags: readonly Tag[]): readonly St
     const first = found[0];
     return first ? [{ starId, color: first.color, count: found.length }] : [];
   });
+}
+
+// A system in several regions shows the first of them.
+export function regionColors(regions: readonly Region[]): ReadonlyMap<string, string> {
+  const colors = new Map<string, string>();
+  for (const { color, systemIds } of regions) {
+    for (const id of systemIds) if (!colors.has(id)) colors.set(id, color);
+  }
+  return colors;
 }

@@ -1,19 +1,19 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { exportFileName, parseWorldFile, serialiseWorld, unknownIds } from '../lib/io';
+import { routesCsv } from '../lib/csv';
+import { downloadText, downloadUrl } from '../lib/download';
+import {
+  exportFileName,
+  parseWorldFile,
+  serialiseWorld,
+  unknownIds,
+  worldFileName,
+} from '../lib/io';
 import type { Catalogue } from '../store/catalogue';
 import { useWorld } from '../store/world';
 import type { World } from '../types/world';
 import { BUTTON_CLASS, FIELD_LABEL_CLASS, INPUT_CLASS } from './controlStyles';
+import { RegionManager } from './RegionManager';
 import { TagManager } from './TagManager';
-
-function download(fileName: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 interface PendingImport {
   readonly world: World;
@@ -38,7 +38,7 @@ function ImportChoice({
     >
       <p>
         “{world.name}”: {world.routes.length} routes, {world.tags.length} tags,{' '}
-        {Object.keys(world.starMeta).length} annotated stars.
+        {world.regions.length} regions, {Object.keys(world.starMeta).length} annotated stars.
       </p>
       {unknown.length > 0 && (
         <p data-testid="unknown-ids" className="mt-1 break-words text-amber-300">
@@ -153,7 +153,13 @@ export function WorldPanel({ catalogue }: { readonly catalogue: Catalogue }) {
         </button>
         <button
           type="button"
-          onClick={() => download(exportFileName(world, new Date()), serialiseWorld(world))}
+          onClick={() =>
+            downloadText(
+              exportFileName(world, new Date()),
+              serialiseWorld(world),
+              'application/json',
+            )
+          }
           className={BUTTON_CLASS}
         >
           Export JSON
@@ -169,6 +175,35 @@ export function WorldPanel({ catalogue }: { readonly catalogue: Catalogue }) {
           hidden
           onChange={(event) => void onFile(event)}
         />
+        <button
+          type="button"
+          onClick={() =>
+            downloadText(
+              worldFileName('routes', 'csv', world, new Date()),
+              // The byte order mark is how Excel knows the file is UTF-8.
+              `\uFEFF${routesCsv(world, catalogue.systems, catalogue.systemsById)}`,
+              'text/csv',
+            )
+          }
+          className={BUTTON_CLASS}
+        >
+          Export routes CSV
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+              downloadUrl(
+                worldFileName('snapshot', 'png', world, new Date()),
+                canvas.toDataURL('image/png'),
+              );
+            }
+          }}
+          className={BUTTON_CLASS}
+        >
+          Snapshot PNG
+        </button>
       </div>
       {importError && (
         <p role="alert" className="mt-2 text-xs text-rose-300">
@@ -178,6 +213,7 @@ export function WorldPanel({ catalogue }: { readonly catalogue: Catalogue }) {
       {pending && <ImportChoice pending={pending} onDone={() => setPending(null)} />}
 
       <TagManager />
+      <RegionManager />
     </>
   );
 }

@@ -1,7 +1,13 @@
-import { movedWaypoints, routeLegs, routeLengthLy, withoutWaypoint } from '../lib/routes';
+import {
+  movedWaypoints,
+  routeLegs,
+  routeLengthLy,
+  routeTitle,
+  withoutWaypoint,
+} from '../lib/routes';
 import { formatValue } from '../lib/starFacts';
 import { formatTravelTime, legTravelTime, routeTravelTime } from '../lib/travel';
-import { systemCustomName, withCustomName } from '../lib/worldView';
+import { systemLabel } from '../lib/worldView';
 import type { Catalogue } from '../store/catalogue';
 import { useUi } from '../store/ui';
 import { useWorld } from '../store/world';
@@ -13,11 +19,7 @@ const MAX_WIDTH = 6;
 
 function useSystemName(catalogue: Catalogue): (id: string) => string {
   const starMeta = useWorld((state) => state.world.starMeta);
-  return (id) => {
-    const system = catalogue.systemsById.get(id);
-    if (!system) return `${id} (not in the catalogue)`;
-    return withCustomName(system.name, systemCustomName(starMeta, system));
-  };
+  return (id) => systemLabel(starMeta, catalogue.systemsById, id);
 }
 
 function Waypoints({ route, catalogue }: { readonly route: Route; readonly catalogue: Catalogue }) {
@@ -170,11 +172,6 @@ function RouteEditor({
       </button>
     </div>
   );
-}
-
-function routeTitle(route: Route, nameOf: (id: string) => string): string {
-  if (route.name) return route.name;
-  return `${nameOf(route.waypoints[0] ?? '')} → ${nameOf(route.waypoints.at(-1) ?? '')}`;
 }
 
 export function RoutePanel({ catalogue }: { readonly catalogue: Catalogue }) {

@@ -21,6 +21,9 @@ const CAMERA = {
   position: [...HOME_POSITION] as [number, number, number],
 };
 
+// Keeps the last frame readable, for the PNG snapshot.
+const GL = { preserveDrawingBuffer: true };
+
 const NO_STARS: ReadonlySet<string> = new Set();
 
 // A catalogue rebuild can rename IDs that saved worlds refer to.
@@ -55,7 +58,7 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
   const visible = useMemo(() => countVisible(catalogue.stars, mask), [catalogue, mask]);
   return (
     <>
-      <Canvas camera={CAMERA}>
+      <Canvas camera={CAMERA} gl={GL}>
         <Scene
           catalogue={catalogue}
           mask={mask}
@@ -81,7 +84,7 @@ export default function App() {
     void load();
   }, [load]);
 
-  const idMap = catalogue?.idMap;
+  const idMap = catalogue?.meta.idMap;
   useEffect(() => (idMap ? remapOnceHydrated(idMap) : undefined), [idMap]);
 
   if (catalogue) return <Map catalogue={catalogue} />;

@@ -9,7 +9,7 @@ import {
   HOME_TARGET,
 } from '../../src/lib/camera';
 import { galacticToScene } from '../../src/lib/coords';
-import type { Star, StarSystem } from '../../src/types/catalogue';
+import type { CatalogueMeta, Star, StarSystem } from '../../src/types/catalogue';
 
 const stars = JSON.parse(
   readFileSync(new URL('../../public/data/stars.json', import.meta.url), 'utf8'),
@@ -19,8 +19,18 @@ const systems = JSON.parse(
   readFileSync(new URL('../../public/data/systems.json', import.meta.url), 'utf8'),
 ) as readonly StarSystem[];
 
-const PANEL_WIDTH_PX = 280;
-const MODAL_WIDTH_PX = 440;
+const meta = JSON.parse(
+  readFileSync(new URL('../../public/data/meta.json', import.meta.url), 'utf8'),
+) as CatalogueMeta;
+
+const PANEL_WIDTH_PX = 256;
+const MODAL_WIDTH_PX = 430;
+const PHONE_WIDTH_PX = 768; // below this, the controls and modal become sheets
+const MAP_TOP_PX = 340; // clear of the toolbar, its banners and a short list of search results
+const PHONE_SHEET_PX = 170;
+const MIN_STAR_GAP_PX = 20;
+const EMPTY_OFFSET_PX = 16; // a clear spot next to an isolated star
+const MOUSE_PICK_RADIUS_PX = 14;
 const SETTLE_MS = 1500;
 const CHANGED_FRACTION = 0.0002;
 
@@ -40,8 +50,36 @@ async function visibleStars(page: Page): Promise<number> {
   return Number(/^([\d,]+) stars/.exec(text)?.[1]?.replaceAll(',', ''));
 }
 
+function viewportOf(page: Page): { readonly width: number; readonly height: number } {
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error('No viewport');
+  return viewport;
+}
+
+function isPhone(page: Page): boolean {
+  return viewportOf(page).width < PHONE_WIDTH_PX;
+}
+
+// Phones start with the map controls collapsed, as they would otherwise cover the map.
+async function showControls(page: Page): Promise<void> {
+  const show = page
+    .getByRole('complementary', { name: 'Map controls' })
+    .getByRole('button', { name: 'Show', exact: true });
+  if (await show.isVisible()) await show.click();
+}
+
+async function hideControlsOnPhone(page: Page): Promise<void> {
+  if (!isPhone(page)) return;
+  await page
+    .getByRole('complementary', { name: 'Map controls' })
+    .getByRole('button', { name: 'Hide', exact: true })
+    .click();
+}
+
 async function setRadius(page: Page, radiusLy: number): Promise<void> {
+  await showControls(page);
   await page.getByLabel('Radius').fill(String(radiusLy));
+  await hideControlsOnPhone(page);
 }
 
 async function canvasShot(page: Page): Promise<Buffer> {
@@ -100,9 +138,7 @@ function projectedStars(
   keep: (star: Star) => boolean = () => true,
   radiusLy = 50,
 ): readonly StarOnScreen[] {
-  const viewport = page.viewportSize();
-  if (!viewport) throw new Error('No viewport');
-  const { width, height } = viewport;
+  const { width, height } = viewportOf(page);
   const camera = new PerspectiveCamera(CAMERA_FOV, width / height, CAMERA_NEAR, CAMERA_FAR);
   camera.position.set(...HOME_POSITION);
   camera.lookAt(...HOME_TARGET);
@@ -115,19 +151,29 @@ function projectedStars(
     });
 }
 
-// Stars to click: clear of the panel and the modal, with no other star near them on screen.
+// Stars to click: clear of the panels and the modal, with no other star near them or their empty
+// spot on screen. On a phone the modal fills the screen, so nothing is clear of it.
 function isolatedStars(page: Page, keep?: (star: Star) => boolean): readonly StarOnScreen[] {
-  const width = page.viewportSize()?.width ?? 0;
-  const height = page.viewportSize()?.height ?? 0;
+  const { width, height } = viewportOf(page);
+  const phone = isPhone(page);
+  const left = phone ? 16 + EMPTY_OFFSET_PX : PANEL_WIDTH_PX + EMPTY_OFFSET_PX;
+  const right = phone ? width - 16 : width - MODAL_WIDTH_PX;
+  const bottom = height - (phone ? PHONE_SHEET_PX : 40);
   const projected = projectedStars(page, keep);
   return projected.filter(
     (a) =>
       a.star.id !== 'hyg:0' &&
-      a.x > PANEL_WIDTH_PX &&
-      a.x < width - MODAL_WIDTH_PX &&
-      a.y > 64 && // below the toolbar
-      a.y < height - 40 &&
-      projected.every((b) => b === a || Math.hypot(a.x - b.x, a.y - b.y) > 30),
+      a.x > left &&
+      a.x < right &&
+      a.y > MAP_TOP_PX &&
+      a.y < bottom &&
+      projected.every(
+        (b) =>
+          b === a ||
+          (Math.hypot(a.x - b.x, a.y - b.y) > MIN_STAR_GAP_PX &&
+            Math.hypot(a.x - EMPTY_OFFSET_PX - b.x, a.y - EMPTY_OFFSET_PX - b.y) >
+              MOUSE_PICK_RADIUS_PX),
+      ),
   );
 }
 
@@ -176,6 +222,7 @@ test('renders stars, and the radius slider and class filters change what is show
   await expectChanged(page, await canvasShot(page), before);
   await setRadius(page, 50);
 
+  await showControls(page);
   const mDwarfs = stars.filter((star) => star.distLy <= 50 && star.spectral.cls === 'M').length;
   await page.getByLabel('M', { exact: true }).uncheck();
   expect(await visibleStars(page)).toBe(within(50) - mDwarfs);
@@ -187,6 +234,7 @@ test('renders stars, and the radius slider and class filters change what is show
 for (const label of ['Galactic grid', 'Range rings (5 ly)', 'Drop lines']) {
   test(`${label} toggles`, async ({ page }) => {
     await openMap(page);
+    await showControls(page);
     const on = await canvasShot(page);
     await page.getByLabel(label).uncheck();
     const off = await canvasShot(page);
@@ -197,6 +245,7 @@ for (const label of ['Galactic grid', 'Range rings (5 ly)', 'Drop lines']) {
 }
 
 test('double-click flies to a star, H returns to Sol', async ({ page }) => {
+  test.skip(isPhone(page), 'The first tap opens a full-screen sheet; phones fly there by search.');
   await openMap(page);
   const orbitTarget = page.getByTestId('orbit-target');
   await expect(orbitTarget).toHaveText('Orbit target: Sol');
@@ -220,10 +269,12 @@ test('double-click flies to a star, H returns to Sol', async ({ page }) => {
 test('orbit, pan and zoom move the view', async ({ page }) => {
   await openMap(page);
   const orbitTarget = page.getByTestId('orbit-target');
+  const { width, height } = viewportOf(page);
+  const [dragX, dragY] = [Math.round(width * 0.625), Math.round(height * 0.55)];
   const drag = async (button: 'left' | 'right') => {
-    await page.mouse.move(800, 400);
+    await page.mouse.move(dragX, dragY);
     await page.mouse.down({ button });
-    await page.mouse.move(860, 440, { steps: 5 });
+    await page.mouse.move(dragX + 60, dragY + 40, { steps: 5 });
     await page.mouse.up({ button });
     await page.waitForTimeout(SETTLE_MS);
   };
@@ -256,13 +307,14 @@ test('hovering a star shows its tooltip', async ({ page }) => {
   await page.mouse.move(x, y);
   await expect(tooltip).toContainText(star.displayName);
   await expect(tooltip).toContainText(`${star.distLy.toFixed(2)} ly from Sol`);
-  await page.mouse.move(x + 25, y - 25);
+  await page.mouse.move(x - EMPTY_OFFSET_PX, y - EMPTY_OFFSET_PX);
   await expect(tooltip).toHaveCount(0);
 });
 
 test('click selects with a pulsing ring and the modal; shift-click adds; Esc and empty space clear', async ({
   page,
 }) => {
+  test.skip(isPhone(page), 'The modal fills a phone screen; the touch test covers tap to select.');
   await openMap(page);
   const [first, second] = isolatedStars(page);
   if (!first || !second) throw new Error('Not enough isolated stars');
@@ -303,7 +355,7 @@ test('click selects with a pulsing ring and the modal; shift-click adds; Esc and
   await page.mouse.click(first.x, first.y);
   await page.mouse.click(second.x, second.y);
   await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(second.star.displayName);
-  await page.mouse.click(first.x + 25, first.y - 25);
+  await page.mouse.click(first.x - EMPTY_OFFSET_PX, first.y - EMPTY_OFFSET_PX);
   await expect(dialog).toHaveCount(0);
   await expect(count).toHaveCount(0);
   await expectSame(page, await page.screenshot(aroundFirst), before);
@@ -322,7 +374,9 @@ test('dragging off a star orbits without selecting', async ({ page }) => {
 
 test('the modal lists a host star: facts, planets, HZ strip and neighbours', async ({ page }) => {
   await openMap(page);
+  await showControls(page);
   await page.getByLabel('Has planets').check();
+  await hideControlsOnPhone(page);
   const hosts = new Set(stars.filter((s) => s.planetIds.length > 0).map((s) => s.systemId));
   const { star, x, y } = isolatedStar(
     page,
@@ -443,6 +497,7 @@ test('search: aliases agree, and arrows pick a result', async ({ page }) => {
 test('search: Esc leaves an open modal, and clicking the map closes the results', async ({
   page,
 }) => {
+  test.skip(isPhone(page), 'The modal fills a phone screen, leaving no map or search box to use.');
   await openMap(page);
   const { star, x, y } = isolatedStar(page);
   await page.mouse.click(x, y);
@@ -459,7 +514,7 @@ test('search: Esc leaves an open modal, and clicking the map closes the results'
   await page.keyboard.press('/');
   await page.keyboard.type('sirius');
   await expect(page.getByRole('option').first()).toBeVisible();
-  await page.mouse.click(x + 25, y - 25);
+  await page.mouse.click(x - EMPTY_OFFSET_PX, y - EMPTY_OFFSET_PX);
   await expect(page.getByRole('option')).toHaveCount(0);
 });
 
@@ -467,6 +522,7 @@ test('search: a hit outside the filters widens them so the star shows', async ({
   await openMap(page);
   const far = stars.find((star) => star.distLy > 60 && star.names.hd && star.spectral.cls === 'K');
   if (!far?.names.hd) throw new Error('No distant K star');
+  await showControls(page);
   await page.getByLabel('K', { exact: true }).uncheck();
 
   await page.keyboard.press('/');
@@ -480,7 +536,8 @@ test('search: a hit outside the filters widens them so the star shows', async ({
 
 // Clear of the toolbar, whose hover state shows in screenshots, and of any star's tooltip.
 async function restPointer(page: Page): Promise<void> {
-  await page.mouse.move(1270, 715);
+  const { width, height } = viewportOf(page);
+  await page.mouse.move(width - 10, height - 5);
 }
 
 function threeStops(page: Page): readonly [StarOnScreen, StarOnScreen, StarOnScreen] {
@@ -567,7 +624,8 @@ test('a 3-stop route draws, shows its distances, and persists through a reload',
 test('a hidden route leaves the map, and a deleted one can be undone', async ({ page }) => {
   await openMap(page);
   // Below the toolbar, whose Undo button lights up once there is an edit.
-  const map = { clip: { x: 0, y: 64, width: 1280, height: 656 } };
+  const { width, height } = viewportOf(page);
+  const map = { clip: { x: 0, y: 160, width, height: height - 160 } };
   await restPointer(page);
   const before = await page.screenshot(map);
   await buildRoute(page);
@@ -657,6 +715,7 @@ test('custom names, notes and tags: halos, typing stays typing, search and reloa
   await restPointer(page);
   await expectChanged(page, await page.screenshot(around), before);
 
+  await showControls(page);
   await page.getByLabel('Tagged only').check();
   await expect(page.getByTestId('visible-count')).toContainText(/^2 stars/);
   await page.getByLabel('Tagged only').uncheck();
@@ -860,7 +919,16 @@ test('a reference star moves the distances, and a range sphere lists what is ins
   const siriusModal = page.getByRole('dialog', { name: 'Sirius' });
   await expect(siriusModal.getByText(`Distance from ${pick.star.displayName}`)).toBeVisible();
 
-  await page.getByRole('button', { name: 'Back to Sol' }).click();
+  if (isPhone(page)) {
+    // The sheet covers the map controls, so step out to reach them and come back.
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Back to Sol' }).click();
+    await page.keyboard.press('/');
+    await page.keyboard.type('sirius');
+    await page.keyboard.press('Enter');
+  } else {
+    await page.getByRole('button', { name: 'Back to Sol' }).click();
+  }
   expect(await visibleStars(page)).toBeGreaterThan(0);
   await expect(siriusModal.getByText(`Distance from ${pick.star.displayName}`)).toHaveCount(0);
 
@@ -906,6 +974,133 @@ test('probe trajectories, the year slider, the approach table and the pulsar map
   const withoutPulsars = await canvasShot(page);
   await panel.getByLabel('Show pulsar map').check();
   await expectChanged(page, await canvasShot(page), withoutPulsars);
+});
+
+test('regions: a halo and a legend, assigned from the modal or the selection, and saved', async ({
+  page,
+}) => {
+  await openMap(page);
+  const [first, second] = threeStops(page);
+  const around = { clip: { x: first.x - 30, y: first.y - 30, width: 60, height: 60 } };
+  await restPointer(page);
+  const before = await page.screenshot(around);
+  const legend = page.getByRole('list', { name: 'Region legend' });
+  await expect(legend).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'World', exact: true }).click();
+  const regions = page.getByRole('region', { name: 'Regions' });
+  await regions.getByLabel('New region name').fill('Hegemony');
+  await regions.getByRole('button', { name: 'Add' }).click();
+  await expect(legend).toContainText('Hegemony');
+  await page.getByRole('button', { name: 'World', exact: true }).click();
+
+  await page.mouse.click(first.x, first.y);
+  await page
+    .getByRole('dialog')
+    .getByRole('group', { name: 'Regions' })
+    .getByRole('button', { name: 'Hegemony', pressed: false })
+    .click();
+  await expect(legend.getByRole('listitem')).toHaveText(/Hegemony\s*1/);
+
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await restPointer(page);
+  await page.waitForTimeout(300);
+  await expectChanged(page, await page.screenshot(around), before);
+
+  // Picked on the map, then added in one go from the panel.
+  await page.mouse.click(second.x, second.y);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'World', exact: true }).click();
+  await regions.getByRole('button', { name: 'Add selected systems to Hegemony' }).click();
+  await expect(legend.getByRole('listitem')).toHaveText(/Hegemony\s*2/);
+
+  await page.reload();
+  await expect(legend.getByRole('listitem')).toHaveText(/Hegemony\s*2/);
+
+  await page.getByRole('button', { name: 'World', exact: true }).click();
+  await regions.getByRole('button', { name: 'Delete Hegemony' }).click();
+  await expect(legend).toHaveCount(0);
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(legend).toContainText('Hegemony');
+});
+
+test('the routes CSV has a row per leg', async ({ page }, testInfo) => {
+  await openMap(page);
+  const [first, second, third] = await buildRoute(page);
+  if (!first || !second || !third) throw new Error('Not enough stops');
+  await page.getByLabel('Name', { exact: true }).fill('Haul, the long');
+  await page.getByRole('button', { name: 'World', exact: true }).click();
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Export routes CSV' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^routes-my-world-\d{4}-\d{2}-\d{2}\.csv$/);
+  const path = testInfo.outputPath('routes.csv');
+  await download.saveAs(path);
+  const lines = readFileSync(path, 'utf8')
+    .replace(/^\uFEFF/, '')
+    .split('\r\n');
+  expect(lines).toHaveLength(4); // the header, two legs, and the final line ending
+  expect(lines[0]).toBe('route,leg,from,to,ly,travel time');
+  expect(lines[1]).toMatch(/^"Haul, the long",1,.*,\d+\.\d{2},.*(jump|no jump path)/);
+  expect(lines[2]).toMatch(/^"Haul, the long",2,/);
+});
+
+test('the PNG snapshot is the map, on an opaque background', async ({ page }, testInfo) => {
+  await openMap(page);
+  await page.getByRole('button', { name: 'World', exact: true }).click();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Snapshot PNG' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^snapshot-my-world-\d{4}-\d{2}-\d{2}\.png$/);
+  const path = testInfo.outputPath('snapshot.png');
+  await download.saveAs(path);
+
+  const { width, height } = viewportOf(page);
+  const scale = await page.evaluate(() => window.devicePixelRatio);
+  const pixels = await page.evaluate(async (base64) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('No 2D context');
+    context.drawImage(image, 0, 0);
+    const { data } = context.getImageData(0, 0, image.width, image.height);
+    let opaque = 0;
+    let lit = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] === 255) opaque++;
+      if ((data[i] ?? 0) + (data[i + 1] ?? 0) + (data[i + 2] ?? 0) > 60) lit++;
+    }
+    return { width: image.width, height: image.height, total: data.length / 4, opaque, lit };
+  }, readFileSync(path).toString('base64'));
+  expect(pixels.width).toBe(Math.round(width * scale));
+  expect(pixels.height).toBe(Math.round(height * scale));
+  expect(pixels.opaque).toBe(pixels.total);
+  expect(pixels.lit).toBeGreaterThan(500); // stars, grid and labels, not a blank frame
+});
+
+test('the About panel credits the data and gives its build date', async ({ page }) => {
+  await openMap(page);
+  await page.getByRole('button', { name: 'About' }).click();
+  const panel = page.getByRole('complementary', { name: 'About panel' });
+  await expect(panel.getByTestId('attribution')).toContainText('HYG Database');
+  await expect(panel.getByTestId('attribution')).toContainText('NASA Exoplanet Archive');
+  await expect(panel.getByTestId('build-date')).toHaveText(meta.buildDate.slice(0, 10));
+  await expect(panel.getByRole('link', { name: 'HYG Database' })).toHaveAttribute(
+    'href',
+    'https://astronexus.com/hyg',
+  );
+  await expect(panel.getByRole('link', { name: /NASA Exoplanet Archive/ })).toHaveAttribute(
+    'href',
+    'https://exoplanetarchive.ipac.caltech.edu/',
+  );
 });
 
 test.describe('touch', () => {

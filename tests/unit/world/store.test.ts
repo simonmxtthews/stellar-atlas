@@ -258,3 +258,42 @@ describe('saving across a reload', () => {
     }
   });
 });
+
+describe('regions', () => {
+  it('creates, edits and deletes a region, each an undo step', () => {
+    const id = actions().addRegion('Hegemony');
+    expect(world().regions).toEqual([
+      { id, name: 'Hegemony', color: expect.stringMatching(/^#/), systemIds: [] },
+    ]);
+    actions().updateRegion(id, { name: 'League', color: '#123456' });
+    expect(world().regions[0]).toMatchObject({ name: 'League', color: '#123456' });
+    actions().deleteRegion(id);
+    expect(world().regions).toEqual([]);
+    actions().undo();
+    expect(world().regions[0]?.name).toBe('League');
+  });
+
+  it('gives each new region its own colour', () => {
+    actions().addRegion('A');
+    actions().addRegion('B');
+    expect(world().regions[0]?.color).not.toBe(world().regions[1]?.color);
+  });
+
+  it('toggles a system in and out, and adds a selection without duplicates', () => {
+    const id = actions().addRegion('Core');
+    actions().toggleSystemRegion('sys:a', id);
+    expect(world().regions[0]?.systemIds).toEqual(['sys:a']);
+    actions().addSystemsToRegion(id, ['sys:a', 'sys:b']);
+    expect(world().regions[0]?.systemIds).toEqual(['sys:a', 'sys:b']);
+    actions().toggleSystemRegion('sys:a', id);
+    expect(world().regions[0]?.systemIds).toEqual(['sys:b']);
+  });
+
+  it('leaves other regions alone, and a world with regions still validates', () => {
+    const first = actions().addRegion('A');
+    actions().addRegion('B');
+    actions().toggleSystemRegion('sys:a', first);
+    expect(world().regions[1]?.systemIds).toEqual([]);
+    expect(parseWorld(world())).toEqual(world());
+  });
+});

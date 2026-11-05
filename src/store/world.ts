@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware';
 import { mergeWorlds, parseWorld, remapWorldIds } from '../lib/io';
 import { movedWaypoints, withoutWaypoint } from '../lib/routes';
-import type { DriveModel, Route, StarMeta, Tag, World } from '../types/world';
+import type { DriveModel, Region, Route, StarMeta, Tag, World } from '../types/world';
 
 const STORAGE_KEY = 'stellar-atlas-worlds';
 const UNLOAD_KEY = `${STORAGE_KEY}-unload`;
@@ -62,6 +62,15 @@ export interface WorldState extends Persisted {
   readonly toggleStarTag: (starId: string, tagId: string) => void;
   readonly setCustomName: (starId: string, name: string) => void;
   readonly setNotes: (starId: string, notes: string) => void;
+  readonly addRegion: (name: string) => string;
+  readonly updateRegion: (
+    id: string,
+    patch: Partial<Omit<Region, 'id' | 'systemIds'>>,
+    field?: string,
+  ) => void;
+  readonly deleteRegion: (id: string) => void;
+  readonly toggleSystemRegion: (systemId: string, regionId: string) => void;
+  readonly addSystemsToRegion: (regionId: string, systemIds: readonly string[]) => void;
 }
 
 let pendingSave: StorageValue<Persisted> | null = null;
@@ -145,6 +154,13 @@ function withRoute(world: World, id: string, change: (route: Route) => Route): W
   return {
     ...world,
     routes: world.routes.map((route) => (route.id === id ? change(route) : route)),
+  };
+}
+
+function withRegion(world: World, id: string, change: (region: Region) => Region): World {
+  return {
+    ...world,
+    regions: world.regions.map((region) => (region.id === id ? change(region) : region)),
   };
 }
 
@@ -337,6 +353,44 @@ export const useWorld = create<WorldState>()(
           edit(
             (world) => withStarMeta(world, starId, (meta) => ({ ...meta, notes })),
             `star:${starId}:notes`,
+          ),
+
+        addRegion: (name) => {
+          const id = newId('region');
+          edit((world) => ({
+            ...world,
+            regions: [
+              ...world.regions,
+              { id, name, color: nextColor(world.regions.length), systemIds: [] },
+            ],
+          }));
+          return id;
+        },
+        updateRegion: (id, patch, field) =>
+          edit(
+            (world) => withRegion(world, id, (region) => ({ ...region, ...patch })),
+            field && `region:${id}:${field}`,
+          ),
+        deleteRegion: (id) =>
+          edit((world) => ({
+            ...world,
+            regions: world.regions.filter((region) => region.id !== id),
+          })),
+        toggleSystemRegion: (systemId, regionId) =>
+          edit((world) =>
+            withRegion(world, regionId, (region) => ({
+              ...region,
+              systemIds: region.systemIds.includes(systemId)
+                ? region.systemIds.filter((id) => id !== systemId)
+                : [...region.systemIds, systemId],
+            })),
+          ),
+        addSystemsToRegion: (regionId, systemIds) =>
+          edit((world) =>
+            withRegion(world, regionId, (region) => ({
+              ...region,
+              systemIds: [...new Set([...region.systemIds, ...systemIds])],
+            })),
           ),
       };
     },

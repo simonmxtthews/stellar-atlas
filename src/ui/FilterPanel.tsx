@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { MAX_RADIUS_LY, MIN_RADIUS_LY, SOL_ID } from '../lib/filters';
 import { useUi, type Overlays } from '../store/ui';
 import type { SpectralClass, Star } from '../types/catalogue';
+import { RegionLegend } from './RegionLegend';
 
 const CLASS_LABELS: readonly (readonly [SpectralClass, string, string])[] = [
   ['O', 'O', '#9bb0ff'],
@@ -136,6 +137,8 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
           </button>
         </p>
       )}
+
+      <RegionLegend />
 
       {open && (
         <div className="max-h-[calc(100dvh-14rem)] overflow-y-auto max-md:max-h-[45dvh]">
