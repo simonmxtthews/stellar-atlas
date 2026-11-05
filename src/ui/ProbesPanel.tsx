@@ -62,7 +62,7 @@ function Approaches({
             </tr>
           </thead>
           <tbody className="tabular-nums">
-            {approaches.map(({ system, distanceLy: closest, year }) => (
+            {approaches.map(({ system, distanceLy: closest, year, rough }) => (
               <tr key={system.id} className="border-t border-slate-800/70">
                 <td className="py-0.5">
                   <button
@@ -73,7 +73,10 @@ function Approaches({
                     {system.name}
                   </button>
                 </td>
-                <td className="text-right">{formatValue(closest, 2, 'ly')}</td>
+                <td className="text-right">
+                  {rough && <span title="Rough: incomplete motion data">≈</span>}
+                  {formatValue(closest, 2, 'ly')}
+                </td>
                 <td className="text-right">{formatYear(year)}</td>
               </tr>
             ))}
@@ -175,9 +178,14 @@ export function ProbesPanel({ catalogue }: { readonly catalogue: Catalogue }) {
         />
         <span className="tabular-nums">{withinLy} ly</span>
       </label>
-      <p data-testid="fixed-stars-note" className="mt-1 text-xs text-amber-300">
-        Stars are held at their present positions. Proper motion matters over tens of millennia, so
-        treat far-future approaches as indicative only.
+      <p data-testid="approach-note" className="mt-1 text-xs text-slate-400">
+        Over the next {MAX_YEARS_AHEAD.toLocaleString('en')} years, with each star moving in a
+        straight line at its catalogue velocity. ≈ marks a star with no radial velocity or no motion
+        on record, so its figures are rough.
+      </p>
+      <p className="mt-1 text-xs text-amber-300">
+        The map still draws stars where they are today, so these encounters won't line up with a
+        probe's marker in far-future years.
       </p>
       {probes.map((probe, i) => (
         <Approaches

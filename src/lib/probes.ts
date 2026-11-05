@@ -1,7 +1,7 @@
 import type { Position, Probe, StarSystem } from '../types/catalogue';
-import { distanceLy } from './routes';
 
 export const MAX_YEARS_AHEAD = 100_000;
+export const STAR_EPOCH_YEAR = 2000; // the catalogue's positions are J2000
 export const PROBE_COLORS = ['#fbbf24', '#34d399', '#f87171', '#a78bfa', '#22d3ee'] as const;
 
 export function probePositionAt(probe: Probe, epochYear: number, year: number): Position {
@@ -23,10 +23,13 @@ export interface Approach {
   readonly system: StarSystem;
   readonly distanceLy: number;
   readonly year: number;
+  readonly rough: boolean; // the star's motion is missing, or has no radial velocity
 }
 
-// Systems the path passes within the given distance of, soonest first. Star positions are fixed,
-// and a system whose closest point lies behind the probe is never approached at all.
+const NO_MOTION: Position = [0, 0, 0];
+
+// Where the probe and each moving star come closest over the next MAX_YEARS_AHEAD, soonest first.
+// Both travel in straight lines, and a pair already drawing apart is never approached at all.
 export function closestApproaches(
   probe: Probe,
   epochYear: number,
@@ -35,15 +38,27 @@ export function closestApproaches(
 ): readonly Approach[] {
   const [px, py, pz] = probe.pos;
   const [vx, vy, vz] = probe.velLyPerYear;
-  const speedSquared = vx * vx + vy * vy + vz * vz;
+  const sinceStarEpoch = epochYear - STAR_EPOCH_YEAR;
   return systems
     .flatMap((system) => {
-      const [x, y, z] = system.pos;
-      const elapsed = ((x - px) * vx + (y - py) * vy + (z - pz) * vz) / speedSquared;
-      if (elapsed <= 0) return [];
-      const year = epochYear + elapsed;
-      const closest = distanceLy(probePositionAt(probe, epochYear, year), system.pos);
-      return closest <= withinLy ? [{ system, distanceLy: closest, year }] : [];
+      const [svx, svy, svz] = system.motion?.velLyPerYear ?? NO_MOTION;
+      const dx = system.pos[0] + svx * sinceStarEpoch - px;
+      const dy = system.pos[1] + svy * sinceStarEpoch - py;
+      const dz = system.pos[2] + svz * sinceStarEpoch - pz;
+      const [rx, ry, rz] = [svx - vx, svy - vy, svz - vz];
+      const elapsed = -(dx * rx + dy * ry + dz * rz) / (rx * rx + ry * ry + rz * rz);
+      // Not > 0 also catches NaN, from a star keeping exact pace with the probe.
+      if (!(elapsed > 0) || elapsed > MAX_YEARS_AHEAD) return [];
+      const closest = Math.hypot(dx + rx * elapsed, dy + ry * elapsed, dz + rz * elapsed);
+      if (closest > withinLy) return [];
+      return [
+        {
+          system,
+          distanceLy: closest,
+          year: epochYear + elapsed,
+          rough: !system.motion?.radialKnown,
+        },
+      ];
     })
     .sort((a, b) => a.year - b.year);
 }

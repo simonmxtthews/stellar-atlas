@@ -965,7 +965,12 @@ test('probe trajectories, the year slider, the approach table and the pulsar map
   await panel.getByLabel('Probe year').fill('100000');
   // 16.9 km/s for 100,000 years.
   await expect(voyager).toContainText('5.64');
-  await expect(page.getByTestId('fixed-stars-note')).toContainText('Proper motion');
+  await expect(page.getByTestId('approach-note')).toContainText('catalogue velocity');
+
+  // The star that really comes close, moving; not the one that lies ahead of the probe today.
+  const nearest = panel.getByRole('region', { name: 'Voyager 1 closest approaches' });
+  await expect(nearest).toContainText('GJ 445');
+  await expect(nearest).not.toContainText("Barnard's Star");
 
   await panel.getByLabel('Approach distance').fill('10');
   const table = panel.getByRole('region', { name: 'Voyager 1 closest approaches' });
