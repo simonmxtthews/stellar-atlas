@@ -6,6 +6,8 @@ import { Scene } from './scene/Scene';
 import { useCatalogue, type Catalogue } from './store/catalogue';
 import { useUi } from './store/ui';
 import { FilterPanel } from './ui/FilterPanel';
+import { StarModal } from './ui/StarModal';
+import { StarTooltip } from './ui/StarTooltip';
 
 const CAMERA = {
   fov: CAMERA_FOV,
@@ -24,9 +26,11 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
   return (
     <>
       <Canvas camera={CAMERA}>
-        <Scene stars={catalogue.stars} mask={mask} />
+        <Scene catalogue={catalogue} mask={mask} />
       </Canvas>
       <FilterPanel stars={catalogue.stars} visible={visible} />
+      <StarTooltip catalogue={catalogue} />
+      <StarModal catalogue={catalogue} />
     </>
   );
 }

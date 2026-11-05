@@ -334,9 +334,9 @@ Each milestone is done when every box below is ticked, tests pass and lint is cl
 
 **M3 — Selection and modal (MVP)**
 
-- [ ] Hover tooltip; click selects with ring and forced label; shift-click multi-select
-- [ ] Modal shows star facts, companions, planets table, HZ strip and nearest neighbours
-- [ ] LOD labels capped at \~150 with the priority order
+- [x] Hover tooltip; click selects with ring and forced label; shift-click multi-select
+- [x] Modal shows star facts, companions, planets table, HZ strip and nearest neighbours
+- [x] LOD labels capped at \~150 with the priority order
 
 **M4 — Search**
 

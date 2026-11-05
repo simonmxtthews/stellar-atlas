@@ -69,6 +69,9 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
   const filters = useUi((state) => state.filters);
   const overlays = useUi((state) => state.overlays);
   const orbitStarId = useUi((state) => state.orbitStarId);
+  const selectedCount = useUi((state) => state.selectedSystemIds.length);
+  const clearSelection = useUi((state) => state.clearSelection);
+  const labelCount = useUi((state) => state.labelCount);
   const setFilters = useUi((state) => state.setFilters);
   const toggleClass = useUi((state) => state.toggleClass);
   const toggleOverlay = useUi((state) => state.toggleOverlay);
@@ -101,9 +104,26 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
       <p data-testid="orbit-target" className="text-xs text-slate-400">
         Orbit target: {orbitStar?.displayName ?? 'free'}
       </p>
+      <p data-testid="label-count" className="text-xs text-slate-400">
+        {labelCount} labels
+      </p>
+      {selectedCount > 0 && (
+        <p className="flex items-center justify-between text-xs text-slate-300">
+          <span data-testid="selection-count">
+            {selectedCount} system{selectedCount === 1 ? '' : 's'} selected
+          </span>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="rounded px-2 py-0.5 text-slate-400 hover:bg-slate-800"
+          >
+            Clear
+          </button>
+        </p>
+      )}
 
       {open && (
-        <div className="max-h-[calc(100dvh-7rem)] overflow-y-auto max-md:max-h-[45dvh]">
+        <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto max-md:max-h-[45dvh]">
           <label className="mt-3 block">
             <span className="flex justify-between text-xs tracking-wide text-slate-400 uppercase">
               Radius <span className="tracking-normal normal-case">{filters.radiusLy} ly</span>
@@ -157,7 +177,8 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
           </Section>
 
           <p className="mt-3 text-xs text-slate-500">
-            Drag to orbit, right-drag to pan, scroll to zoom. Double-click a star to fly to it;{' '}
+            Drag to orbit, right-drag to pan, scroll to zoom. Click a star to select it, shift-click
+            to add more; <kbd>Esc</kbd> closes then clears. Double-click flies to a star;{' '}
             <kbd>H</kbd> returns to Sol.
           </p>
         </div>

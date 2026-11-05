@@ -1,10 +1,13 @@
 import { create } from 'zustand';
-import type { Star, StarSystem } from '../types/catalogue';
+import type { Planet, Star, StarSystem } from '../types/catalogue';
 
 export interface Catalogue {
   readonly stars: readonly Star[];
   readonly systems: readonly StarSystem[];
+  readonly starsById: ReadonlyMap<string, Star>;
+  readonly starIndexById: ReadonlyMap<string, number>; // index into stars and the scene attributes
   readonly systemsById: ReadonlyMap<string, StarSystem>;
+  readonly planetsById: ReadonlyMap<string, Planet>;
 }
 
 interface CatalogueState {
@@ -28,10 +31,19 @@ export const useCatalogue = create<CatalogueState>()((set) => ({
     pending ??= Promise.all([
       fetchJson<readonly Star[]>('stars.json'),
       fetchJson<readonly StarSystem[]>('systems.json'),
+      fetchJson<readonly Planet[]>('planets.json'),
     ]).then(
-      ([stars, systems]) => {
-        const systemsById = new Map(systems.map((system) => [system.id, system]));
-        set({ catalogue: { stars, systems, systemsById } });
+      ([stars, systems, planets]) => {
+        set({
+          catalogue: {
+            stars,
+            systems,
+            starsById: new Map(stars.map((star) => [star.id, star])),
+            starIndexById: new Map(stars.map((star, i) => [star.id, i])),
+            systemsById: new Map(systems.map((system) => [system.id, system])),
+            planetsById: new Map(planets.map((planet) => [planet.id, planet])),
+          },
+        });
       },
       (error: unknown) => {
         set({ error: error instanceof Error ? error.message : String(error) });

@@ -23,9 +23,14 @@ describe('App', () => {
     const systems = stars.map((star) => systemOf(star));
     vi.stubGlobal(
       'fetch',
-      vi.fn((url: string) =>
-        Promise.resolve(Response.json(url.endsWith('stars.json') ? stars : systems)),
-      ),
+      vi.fn((url: string) => {
+        const data = url.endsWith('stars.json')
+          ? stars
+          : url.endsWith('systems.json')
+            ? systems
+            : [];
+        return Promise.resolve(Response.json(data));
+      }),
     );
 
     const { container } = render(<App />);

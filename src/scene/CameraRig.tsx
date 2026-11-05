@@ -1,7 +1,7 @@
 import { CameraControls, type CameraControlsImpl } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { Matrix4, Vector3 } from 'three';
+import { Vector3 } from 'three';
 import {
   flyPose,
   HOME_POSITION,
@@ -9,24 +9,23 @@ import {
   MAX_CAMERA_DISTANCE,
   MIN_CAMERA_DISTANCE,
 } from '../lib/camera';
-import { pickPoint } from '../lib/pick';
 import { useUi } from '../store/ui';
 import type { Position, Star } from '../types/catalogue';
+import { pickStarAt } from './pickStarAt';
 import { starPosition } from './starAttributes';
-
-const PICK_RADIUS_PX = 12;
 
 interface CameraRigProps {
   readonly stars: readonly Star[];
   readonly positions: Float32Array;
   readonly mask: Uint8Array;
+  readonly onCameraRest: () => void;
 }
 
 function toPosition(vector: Vector3): Position {
   return [vector.x, vector.y, vector.z];
 }
 
-export function CameraRig({ stars, positions, mask }: CameraRigProps) {
+export function CameraRig({ stars, positions, mask, onCameraRest }: CameraRigProps) {
   const controls = useRef<CameraControlsImpl>(null);
   const camera = useThree((state) => state.camera);
   const domElement = useThree((state) => state.gl.domElement);
@@ -55,21 +54,7 @@ export function CameraRig({ stars, positions, mask }: CameraRigProps) {
 
   useEffect(() => {
     const onDoubleClick = (event: MouseEvent) => {
-      const rect = domElement.getBoundingClientRect();
-      const viewProjection = new Matrix4().multiplyMatrices(
-        camera.projectionMatrix,
-        camera.matrixWorldInverse,
-      );
-      const index = pickPoint(
-        positions,
-        mask,
-        viewProjection.elements,
-        rect,
-        event.clientX - rect.left,
-        event.clientY - rect.top,
-        PICK_RADIUS_PX,
-      );
-      const star = stars[index];
+      const star = stars[pickStarAt(camera, domElement, positions, mask, event)];
       if (star) flyToStar(star.id);
     };
     domElement.addEventListener('dblclick', onDoubleClick);
@@ -99,6 +84,13 @@ export function CameraRig({ stars, positions, mask }: CameraRigProps) {
     rig.addEventListener('controlend', onControlEnd);
     return () => rig.removeEventListener('controlend', onControlEnd);
   }, [clearOrbitStar, orbitStarId, positions, stars]);
+
+  useEffect(() => {
+    const rig = controls.current;
+    if (!rig) return;
+    rig.addEventListener('sleep', onCameraRest);
+    return () => rig.removeEventListener('sleep', onCameraRest);
+  }, [onCameraRest]);
 
   return (
     <CameraControls
