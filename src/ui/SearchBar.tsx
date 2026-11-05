@@ -1,9 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { revealFilters } from '../lib/filters';
-import { createStarSearch, searchStars, type StarSearch } from '../lib/search';
+import { isTypingTarget } from '../lib/keys';
+import { createStarSearch, searchStars, withWorldNames, type StarSearch } from '../lib/search';
 import { formatValue, spectralCode } from '../lib/starFacts';
+import { customNameOf, withCustomName } from '../lib/worldView';
 import type { Catalogue } from '../store/catalogue';
 import { useUi } from '../store/ui';
+import { useWorld } from '../store/world';
 import type { Star } from '../types/catalogue';
 
 const INDEX_IDLE_TIMEOUT_MS = 1000;
@@ -26,12 +29,15 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [focused, setFocused] = useState(false);
+  const starMeta = useWorld((state) => state.world.starMeta);
+  const tags = useWorld((state) => state.world.tags);
 
   useEffect(() => whenIdle(() => setSearch(createStarSearch(catalogue))), [catalogue]);
 
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (isTypingTarget(event.target)) return;
       event.preventDefault();
       input.current?.focus();
     };
@@ -39,7 +45,10 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const results = useMemo(() => (search ? searchStars(search, query) : []), [query, search]);
+  const results = useMemo(
+    () => (search ? searchStars(withWorldNames(search, starMeta, tags), query) : []),
+    [query, search, starMeta, tags],
+  );
   const open = focused && search !== null && query.trim() !== '';
 
   useEffect(() => {
@@ -55,7 +64,8 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
   const choose = (star: Star) => {
     const { filters, setFilters, select, flyToStar } = useUi.getState();
     const system = catalogue.systemsById.get(star.systemId);
-    if (system) setFilters(revealFilters(star, system, filters));
+    const tagged = (starMeta[star.id]?.tagIds.length ?? 0) > 0;
+    if (system) setFilters(revealFilters(star, system, filters, tagged));
     select(star.systemId, star.id);
     flyToStar(star.id);
     finish();
@@ -122,7 +132,9 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
               i === active ? 'bg-slate-800' : ''
             }`}
           >
-            <span className="truncate">{star.displayName}</span>
+            <span className="truncate">
+              {withCustomName(star.displayName, customNameOf(starMeta, star.id))}
+            </span>
             <span className="whitespace-nowrap text-slate-400 tabular-nums">
               {spectralCode(star.spectral)} · {formatValue(star.distLy, 2, 'ly')}
             </span>

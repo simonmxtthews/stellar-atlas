@@ -61,7 +61,23 @@ describe('countVisible', () => {
   });
 });
 
+describe('computeVisibleMask with tags', () => {
+  it('taggedOnly keeps tagged stars and Sol', () => {
+    const stars = [starOf({ id: 'hyg:0' }), starOf({ id: 'a' }), starOf({ id: 'b' })];
+    const systems = new Map(stars.map((star) => [star.systemId, systemOf(star)]));
+    const filters = { ...DEFAULT_FILTERS, taggedOnly: true };
+    expect([...computeVisibleMask(stars, systems, filters, new Set(['b']))]).toEqual([1, 0, 1]);
+  });
+});
+
 describe('revealFilters', () => {
+  it('drops taggedOnly for an untagged star, and keeps it for a tagged one', () => {
+    const star = starOf({ id: 'a' });
+    const filters = { ...DEFAULT_FILTERS, taggedOnly: true };
+    expect(revealFilters(star, systemOf(star), filters).taggedOnly).toBe(false);
+    expect(revealFilters(star, systemOf(star), filters, true).taggedOnly).toBe(true);
+  });
+
   const far = starOf({ id: 'hyg:9', distLy: 80.2, spectral: { cls: 'M' } });
 
   it('leaves filters alone when the star already shows', () => {

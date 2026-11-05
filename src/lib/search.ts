@@ -1,5 +1,6 @@
 import MiniSearch, { type SearchOptions } from 'minisearch';
 import type { Star, StarNames, StarSystem } from '../types/catalogue';
+import type { StarMeta, Tag } from '../types/world';
 import { CONSTELLATION_GENITIVE, CONSTELLATION_NOMINATIVE, GREEK } from './starNames';
 
 const RESULT_LIMIT = 10;
@@ -155,6 +156,12 @@ function catalogueNames(names: StarNames): readonly string[] {
 export interface StarSearch {
   readonly index: MiniSearch<Star>;
   readonly starsById: ReadonlyMap<string, Star>;
+  readonly worldIndex?: MiniSearch<WorldEntry>;
+}
+
+interface WorldEntry {
+  readonly id: string;
+  readonly terms: string;
 }
 
 export function createStarSearch({
@@ -181,6 +188,30 @@ export function createStarSearch({
   return { index, starsById };
 }
 
+/**
+ * The search with custom names and tag labels added. They change as the author types, so they get
+ * a small index of their own that is cheap to rebuild, leaving the catalogue's untouched.
+ */
+export function withWorldNames(
+  search: StarSearch,
+  starMeta: Readonly<Record<string, StarMeta>>,
+  tags: readonly Tag[],
+): StarSearch {
+  const labels = new Map(tags.map((tag) => [tag.id, tag.label]));
+  const worldIndex = new MiniSearch<WorldEntry>({
+    fields: ['terms'],
+    tokenize: (text) => text.split(' '),
+    processTerm: (term) => term,
+  });
+  worldIndex.addAll(
+    Object.entries(starMeta).map(([id, { customName, tagIds }]) => {
+      const names = [customName ?? '', ...tagIds.map((tagId) => labels.get(tagId) ?? '')];
+      return { id, terms: [...new Set(names.flatMap(aliasTerms))].join(' ') };
+    }),
+  );
+  return { ...search, worldIndex };
+}
+
 // A term with a digit in it is never fuzzy: `GJ 698` is not `GJ 699`.
 const fuzziness = (term: string) => (/\d/.test(term) ? false : FUZZINESS);
 
@@ -194,17 +225,21 @@ const MATCH_TIERS: readonly SearchOptions[] = [
 const byPrimaryThenNearest = (a: Star, b: Star) =>
   Number(b.isPrimary) - Number(a.isPrimary) || a.distLy - b.distLy;
 
-/** Exact matches, then prefix, then fuzzy; within each, primaries first and the nearest first. */
+/**
+ * Exact matches, then prefix, then fuzzy; within each, the author's own names first, then primaries
+ * and the nearest.
+ */
 export function searchStars(search: StarSearch, query: string): readonly Star[] {
   const terms = normaliseWords(query).join(' ');
   if (terms === '') return [];
   const found = new Set<Star>();
   for (const tier of MATCH_TIERS) {
-    const stars = search.index
-      .search(terms, { ...tier, combineWith: 'AND' })
-      .flatMap((result) => search.starsById.get(result.id as string) ?? [])
-      .sort(byPrimaryThenNearest);
-    for (const star of stars) found.add(star);
+    for (const index of [search.worldIndex, search.index]) {
+      const stars = (index?.search(terms, { ...tier, combineWith: 'AND' }) ?? [])
+        .flatMap((result) => search.starsById.get(result.id as string) ?? [])
+        .sort(byPrimaryThenNearest);
+      for (const star of stars) found.add(star);
+    }
     if (found.size >= RESULT_LIMIT) break;
   }
   return [...found].slice(0, RESULT_LIMIT);

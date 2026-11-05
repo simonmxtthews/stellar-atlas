@@ -2,8 +2,9 @@ import { Suspense, useMemo, useReducer } from 'react';
 import type { Catalogue } from '../store/catalogue';
 import { CameraRig } from './CameraRig';
 import { Grid } from './Grid';
-import { Highlights } from './Highlights';
-import { Labels } from './Labels';
+import { Highlights, TagHalos } from './Highlights';
+import { Labels, TagBadges } from './Labels';
+import { Routes } from './Routes';
 import { buildStarAttributes } from './starAttributes';
 import { StarField } from './StarField';
 import { StarPointer } from './StarPointer';
@@ -16,7 +17,7 @@ export function Scene({
   readonly catalogue: Catalogue;
   readonly mask: Uint8Array;
 }) {
-  const { stars, systems, starsById, starIndexById } = catalogue;
+  const { stars, systems, starIndexById } = catalogue;
   const attributes = useMemo(() => buildStarAttributes(stars), [stars]);
   const anchors = useMemo(
     () => systemAnchors(systems, starIndexById, mask),
@@ -34,15 +35,18 @@ export function Scene({
       <StarPointer stars={stars} positions={attributes.positions} mask={mask} />
       <Grid positions={attributes.positions} mask={mask} />
       <StarField attributes={attributes} mask={mask} />
+      <Routes catalogue={catalogue} />
+      <TagHalos positions={attributes.positions} mask={mask} starIndexById={starIndexById} />
       <Highlights positions={attributes.positions} anchors={anchors} />
       {/* Stars stay up while the label font loads. */}
       <Suspense fallback={null}>
         <Labels
-          starsById={starsById}
+          catalogue={catalogue}
           positions={attributes.positions}
           anchors={anchors}
           cameraEpoch={cameraEpoch}
         />
+        <TagBadges positions={attributes.positions} mask={mask} starIndexById={starIndexById} />
       </Suspense>
     </>
   );

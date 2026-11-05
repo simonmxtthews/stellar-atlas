@@ -25,6 +25,9 @@ export interface StarHover {
   readonly y: number;
 }
 
+export type Tool = 'none' | 'route' | 'ruler';
+export type Panel = 'routes' | 'world';
+
 interface UiState {
   readonly filters: StarFilters;
   readonly overlays: Overlays;
@@ -34,6 +37,12 @@ interface UiState {
   readonly detail: Detail | null;
   readonly hover: StarHover | null;
   readonly labelCount: number;
+  readonly tool: Tool;
+  readonly routeDraft: readonly string[]; // system IDs, in order
+  readonly rulerStarIds: readonly string[]; // up to two
+  readonly panel: Panel | null;
+  readonly expandedRouteId: string | null;
+  readonly hiddenRouteIds: readonly string[]; // this session's view, not part of the world
   readonly setFilters: (patch: Partial<StarFilters>) => void;
   readonly toggleClass: (cls: SpectralClass) => void;
   readonly toggleOverlay: (overlay: keyof Overlays) => void;
@@ -47,6 +56,15 @@ interface UiState {
   readonly closeDetail: () => void;
   readonly setHover: (hover: StarHover | null) => void;
   readonly setLabelCount: (count: number) => void;
+  readonly startRoute: (systemId?: string) => void;
+  readonly addWaypoint: (systemId: string) => void;
+  readonly removeLastWaypoint: () => void;
+  readonly startRuler: () => void;
+  readonly pickRulerStar: (starId: string) => void;
+  readonly endTool: () => void;
+  readonly togglePanel: (panel: Panel) => void;
+  readonly showRoute: (routeId: string | null) => void;
+  readonly toggleRouteHidden: (routeId: string) => void;
 }
 
 export const useUi = create<UiState>()((set) => ({
@@ -58,6 +76,12 @@ export const useUi = create<UiState>()((set) => ({
   detail: null,
   hover: null,
   labelCount: 0,
+  tool: 'none',
+  routeDraft: [],
+  rulerStarIds: [],
+  panel: null,
+  expandedRouteId: null,
+  hiddenRouteIds: [],
   setFilters: (patch) => set((state) => ({ filters: { ...state.filters, ...patch } })),
   toggleClass: (cls) =>
     set((state) => {
@@ -101,4 +125,36 @@ export const useUi = create<UiState>()((set) => ({
   closeDetail: () => set({ detail: null }),
   setHover: (hover) => set({ hover }),
   setLabelCount: (labelCount) => set({ labelCount }),
+  // Clicks now pick waypoints, so the modal gets out of the way.
+  startRoute: (systemId) =>
+    set({
+      tool: 'route',
+      routeDraft: systemId === undefined ? [] : [systemId],
+      rulerStarIds: [],
+      detail: null,
+    }),
+  // A second click on the same system, as in a double-click, isn't a leg.
+  addWaypoint: (systemId) =>
+    set((state) =>
+      state.routeDraft.at(-1) === systemId ? {} : { routeDraft: [...state.routeDraft, systemId] },
+    ),
+  removeLastWaypoint: () => set((state) => ({ routeDraft: state.routeDraft.slice(0, -1) })),
+  startRuler: () => set({ tool: 'ruler', routeDraft: [], rulerStarIds: [], detail: null }),
+  // A third star starts a new measurement.
+  pickRulerStar: (starId) =>
+    set(({ rulerStarIds }) => {
+      const [first, second] = rulerStarIds;
+      if (first === undefined || second !== undefined) return { rulerStarIds: [starId] };
+      return first === starId ? {} : { rulerStarIds: [first, starId] };
+    }),
+  endTool: () => set({ tool: 'none', routeDraft: [], rulerStarIds: [] }),
+  togglePanel: (panel) => set((state) => ({ panel: state.panel === panel ? null : panel })),
+  showRoute: (expandedRouteId) =>
+    set(expandedRouteId === null ? { expandedRouteId } : { expandedRouteId, panel: 'routes' }),
+  toggleRouteHidden: (routeId) =>
+    set(({ hiddenRouteIds }) => ({
+      hiddenRouteIds: hiddenRouteIds.includes(routeId)
+        ? hiddenRouteIds.filter((id) => id !== routeId)
+        : [...hiddenRouteIds, routeId],
+    })),
 }));

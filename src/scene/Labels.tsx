@@ -14,13 +14,26 @@ import {
   SELECTED_LABEL_PX,
   type LabelCandidate,
 } from '../lib/labels';
+import { galacticToScene } from '../lib/coords';
+import { distanceLy, routeLegs, type RouteLeg } from '../lib/routes';
+import { formatValue } from '../lib/starFacts';
+import {
+  routeEndpointIds,
+  starHalos,
+  systemCustomName,
+  taggedSystemIds,
+  withCustomName,
+} from '../lib/worldView';
+import type { Catalogue } from '../store/catalogue';
 import { useUi } from '../store/ui';
-import type { Star } from '../types/catalogue';
+import { useWorld } from '../store/world';
+import { DRAFT_COLOR, RULER_COLOR } from './Routes';
 import { starPosition } from './starAttributes';
 import type { SystemAnchor } from './systemAnchors';
 
-// Worlds supply these from M5, once routes and tags exist.
-const NO_SYSTEMS: ReadonlySet<string> = new Set();
+const BADGE_PX = 13;
+const BADGE_COLOR = '#f8fafc'; // a tag colour would vanish against its own halo
+const BADGE_OFFSET_EM: readonly [number, number] = [1, 1];
 
 function tierOf(
   systemId: string,
@@ -35,18 +48,28 @@ function tierOf(
   return proper ? LabelTier.Proper : LabelTier.Other;
 }
 
-const SystemLabel = memo(function SystemLabel({
-  label,
+// Text that faces the camera at a constant pixel size, offset from its anchor in ems.
+const ScreenText = memo(function ScreenText({
+  x,
+  y,
+  z,
+  px,
+  offset,
+  text,
+  color,
   material,
 }: {
-  readonly label: LabelCandidate;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly px: number;
+  readonly offset: readonly [number, number];
+  readonly text: string;
+  readonly color: string;
   readonly material: MeshBasicMaterial;
 }) {
   const group = useRef<Group>(null);
-  const selected = label.tier === LabelTier.Selected;
-  const px = selected ? SELECTED_LABEL_PX : LABEL_PX;
 
-  // Faces the camera at a constant pixel size.
   useFrame(({ camera, size }) => {
     const current = group.current;
     if (!current) return;
@@ -60,57 +83,136 @@ const SystemLabel = memo(function SystemLabel({
   });
 
   return (
-    <group ref={group} position={[label.x, label.y, label.z]}>
+    <group ref={group} position={[x, y, z]}>
       <Text
         font={fontUrl}
         fontSize={1}
         anchorX="left"
-        position={[selected ? SELECTED_LABEL_GAP_EM : LABEL_GAP_EM, 0, 0]}
+        position={[offset[0], offset[1], 0]}
         material={material}
-        color={selected ? '#e0f2fe' : '#94a3b8'}
+        color={color}
         outlineWidth={0.06}
         outlineColor="#020617"
         renderOrder={3}
       >
-        {label.text}
+        {text}
       </Text>
     </group>
   );
 });
 
-interface LabelsProps {
-  readonly starsById: ReadonlyMap<string, Star>;
-  readonly positions: Float32Array;
-  readonly anchors: readonly SystemAnchor[];
-  readonly cameraEpoch: number; // bumped when the camera comes to rest
-}
-
-export function Labels({ starsById, positions, anchors, cameraEpoch }: LabelsProps) {
-  const camera = useThree((state) => state.camera);
-  const size = useThree((state) => state.size);
-  const selectedSystemIds = useUi((state) => state.selectedSystemIds);
-  const setLabelCount = useUi((state) => state.setLabelCount);
+function useLabelMaterial(): MeshBasicMaterial {
   const material = useMemo(
     () => new MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false }),
     [],
   );
   useEffect(() => () => material.dispose(), [material]);
+  return material;
+}
 
-  const candidates = useMemo(() => {
+function legLabels(
+  prefix: string,
+  legs: readonly RouteLeg[],
+  color: string,
+): readonly LabelCandidate[] {
+  return legs.map((leg, i) => {
+    const [x, y, z] = galacticToScene([
+      (leg.from[0] + leg.to[0]) / 2,
+      (leg.from[1] + leg.to[1]) / 2,
+      (leg.from[2] + leg.to[2]) / 2,
+    ]);
+    return {
+      id: `leg:${prefix}:${i}`,
+      tier: LabelTier.RouteEndpoint,
+      color,
+      x,
+      y,
+      z,
+      text: formatValue(leg.distanceLy, 2, 'ly'),
+    };
+  });
+}
+
+interface LabelsProps {
+  readonly catalogue: Catalogue;
+  readonly positions: Float32Array;
+  readonly anchors: readonly SystemAnchor[];
+  readonly cameraEpoch: number; // bumped when the camera comes to rest
+}
+
+export function Labels({ catalogue, positions, anchors, cameraEpoch }: LabelsProps) {
+  const { starsById, systemsById } = catalogue;
+  const camera = useThree((state) => state.camera);
+  const size = useThree((state) => state.size);
+  const selectedSystemIds = useUi((state) => state.selectedSystemIds);
+  const setLabelCount = useUi((state) => state.setLabelCount);
+  const hiddenRouteIds = useUi((state) => state.hiddenRouteIds);
+  const routeDraft = useUi((state) => state.routeDraft);
+  const rulerStarIds = useUi((state) => state.rulerStarIds);
+  const routes = useWorld((state) => state.world.routes);
+  const starMeta = useWorld((state) => state.world.starMeta);
+  const material = useLabelMaterial();
+
+  const shownRoutes = useMemo(
+    () => routes.filter((route) => !hiddenRouteIds.includes(route.id)),
+    [hiddenRouteIds, routes],
+  );
+
+  const systemCandidates = useMemo(() => {
     const selected = new Set(selectedSystemIds);
+    const endpoints = new Set([...routeEndpointIds(shownRoutes), ...routeDraft]);
+    for (const starId of rulerStarIds) {
+      const systemId = starsById.get(starId)?.systemId;
+      if (systemId !== undefined) endpoints.add(systemId);
+    }
+    const tagged = taggedSystemIds(starMeta, starsById);
     return anchors.map(({ system, starIndex }): LabelCandidate => {
       const [x, y, z] = starPosition(positions, starIndex);
       const proper = system.starIds.some((id) => starsById.get(id)?.names.proper !== undefined);
       return {
         id: system.id,
-        tier: tierOf(system.id, proper, selected, NO_SYSTEMS, NO_SYSTEMS),
+        tier: tierOf(system.id, proper, selected, endpoints, tagged),
         x,
         y,
         z,
-        text: labelText(system.name),
+        text: labelText(withCustomName(system.name, systemCustomName(starMeta, system))),
       };
     });
-  }, [anchors, positions, selectedSystemIds, starsById]);
+  }, [
+    anchors,
+    positions,
+    routeDraft,
+    rulerStarIds,
+    selectedSystemIds,
+    shownRoutes,
+    starMeta,
+    starsById,
+  ]);
+
+  const candidates = useMemo(() => {
+    const legs = shownRoutes.flatMap((route) =>
+      legLabels(route.id, routeLegs(route.waypoints, systemsById), route.color),
+    );
+    const draft = legLabels('draft', routeLegs(routeDraft, systemsById), DRAFT_COLOR);
+    const [rulerFrom, rulerTo] = rulerStarIds.map((id) => starsById.get(id));
+    const ruler: readonly LabelCandidate[] =
+      rulerFrom && rulerTo
+        ? legLabels(
+            'ruler',
+            [
+              {
+                fromId: rulerFrom.id,
+                toId: rulerTo.id,
+                from: rulerFrom.pos,
+                to: rulerTo.pos,
+                distanceLy: distanceLy(rulerFrom.pos, rulerTo.pos),
+              },
+            ],
+            RULER_COLOR,
+          ).map((label) => ({ ...label, tier: LabelTier.Selected }))
+        : [];
+    return [...systemCandidates, ...legs, ...draft, ...ruler];
+  }, [routeDraft, rulerStarIds, shownRoutes, starsById, systemCandidates, systemsById]);
 
   // Only on camera rest, a resize or a change of candidates, never per frame.
   const labels = useMemo(() => {
@@ -126,5 +228,55 @@ export function Labels({ starsById, positions, anchors, cameraEpoch }: LabelsPro
 
   useEffect(() => setLabelCount(labels.length), [labels, setLabelCount]);
 
-  return labels.map((label) => <SystemLabel key={label.id} label={label} material={material} />);
+  return labels.map((label) => {
+    const selected = label.tier === LabelTier.Selected;
+    return (
+      <ScreenText
+        key={label.id}
+        x={label.x}
+        y={label.y}
+        z={label.z}
+        px={selected ? SELECTED_LABEL_PX : LABEL_PX}
+        offset={[selected ? SELECTED_LABEL_GAP_EM : LABEL_GAP_EM, 0]}
+        text={label.text}
+        color={label.color ?? (selected ? '#e0f2fe' : '#94a3b8')}
+        material={material}
+      />
+    );
+  });
+}
+
+interface TagBadgesProps {
+  readonly positions: Float32Array;
+  readonly mask: Uint8Array;
+  readonly starIndexById: ReadonlyMap<string, number>;
+}
+
+// A star with several tags shows only the first's halo, plus this count.
+export function TagBadges({ positions, mask, starIndexById }: TagBadgesProps) {
+  const starMeta = useWorld((state) => state.world.starMeta);
+  const tags = useWorld((state) => state.world.tags);
+  const material = useLabelMaterial();
+  const badges = useMemo(
+    () => starHalos(starMeta, tags).filter(({ count }) => count > 1),
+    [starMeta, tags],
+  );
+  return badges.flatMap(({ starId, count }) => {
+    const index = starIndexById.get(starId);
+    if (index === undefined || !mask[index]) return [];
+    const [x, y, z] = starPosition(positions, index);
+    return (
+      <ScreenText
+        key={starId}
+        x={x}
+        y={y}
+        z={z}
+        px={BADGE_PX}
+        offset={BADGE_OFFSET_EM}
+        text={String(count)}
+        color={BADGE_COLOR}
+        material={material}
+      />
+    );
+  });
 }

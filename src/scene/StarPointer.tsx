@@ -1,5 +1,6 @@
 import { useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
+import { isTypingTarget } from '../lib/keys';
 import { useUi } from '../store/ui';
 import type { Star } from '../types/catalogue';
 import { pickStarAt, TOUCH_PICK_RADIUS_PX } from './pickStarAt';
@@ -102,9 +103,13 @@ export function StarPointer({ stars, positions, mask }: StarPointerProps) {
       gesture = null;
       window.clearTimeout(longPressTimer);
       if (cancelled) return;
-      const { select, toggleSelect, clearSelection } = useUi.getState();
+      const { tool, addWaypoint, pickRulerStar, select, toggleSelect, clearSelection } =
+        useUi.getState();
       const star = pick(event, touch);
-      if (!star) {
+      if (tool !== 'none') {
+        if (star && tool === 'route') addWaypoint(star.systemId);
+        if (star && tool === 'ruler') pickRulerStar(star.id);
+      } else if (!star) {
         if (!event.shiftKey) clearSelection();
       } else if (event.shiftKey) {
         toggleSelect(star.systemId, star.id);
@@ -130,9 +135,10 @@ export function StarPointer({ stars, positions, mask }: StarPointerProps) {
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      const { detail, closeDetail, clearSelection } = useUi.getState();
-      if (detail) closeDetail();
+      if (event.key !== 'Escape' || isTypingTarget(event.target)) return;
+      const { tool, endTool, detail, closeDetail, clearSelection } = useUi.getState();
+      if (tool !== 'none') endTool();
+      else if (detail) closeDetail();
       else clearSelection();
     };
 

@@ -2,13 +2,16 @@ import { Canvas } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
 import { CAMERA_FAR, CAMERA_FOV, CAMERA_NEAR, HOME_POSITION } from './lib/camera';
 import { computeVisibleMask, countVisible } from './lib/filters';
+import { taggedStarIds } from './lib/worldView';
 import { Scene } from './scene/Scene';
 import { useCatalogue, type Catalogue } from './store/catalogue';
 import { useUi } from './store/ui';
+import { useWorld } from './store/world';
 import { FilterPanel } from './ui/FilterPanel';
 import { SearchBar } from './ui/SearchBar';
 import { StarModal } from './ui/StarModal';
 import { StarTooltip } from './ui/StarTooltip';
+import { Toolbar } from './ui/Toolbar';
 
 const CAMERA = {
   fov: CAMERA_FOV,
@@ -17,11 +20,29 @@ const CAMERA = {
   position: [...HOME_POSITION] as [number, number, number],
 };
 
+const NO_STARS: ReadonlySet<string> = new Set();
+
+// A catalogue rebuild can rename IDs that saved worlds refer to.
+function remapOnceHydrated(idMap: Readonly<Record<string, string>>): () => void {
+  const remap = () => useWorld.getState().remapIds(idMap);
+  if (useWorld.persist.hasHydrated()) {
+    remap();
+    return () => undefined;
+  }
+  return useWorld.persist.onFinishHydration(remap);
+}
+
 function Map({ catalogue }: { readonly catalogue: Catalogue }) {
   const filters = useUi((state) => state.filters);
+  const starMeta = useWorld((state) => state.world.starMeta);
+  // Only taggedOnly needs the tags, so that editing a note doesn't normally touch the mask.
+  const tagged = useMemo(
+    () => (filters.taggedOnly ? taggedStarIds(starMeta) : NO_STARS),
+    [filters.taggedOnly, starMeta],
+  );
   const mask = useMemo(
-    () => computeVisibleMask(catalogue.stars, catalogue.systemsById, filters),
-    [catalogue, filters],
+    () => computeVisibleMask(catalogue.stars, catalogue.systemsById, filters, tagged),
+    [catalogue, filters, tagged],
   );
   const visible = useMemo(() => countVisible(catalogue.stars, mask), [catalogue, mask]);
   return (
@@ -30,6 +51,7 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
         <Scene catalogue={catalogue} mask={mask} />
       </Canvas>
       <FilterPanel stars={catalogue.stars} visible={visible} />
+      <Toolbar catalogue={catalogue} />
       <SearchBar catalogue={catalogue} />
       <StarTooltip catalogue={catalogue} />
       <StarModal catalogue={catalogue} />
@@ -45,6 +67,9 @@ export default function App() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const idMap = catalogue?.idMap;
+  useEffect(() => (idMap ? remapOnceHydrated(idMap) : undefined), [idMap]);
 
   if (catalogue) return <Map catalogue={catalogue} />;
   return (
