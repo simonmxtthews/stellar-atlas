@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { computeVisibleMask, countVisible, DEFAULT_FILTERS } from '../../../src/lib/filters';
+import {
+  computeVisibleMask,
+  countVisible,
+  DEFAULT_FILTERS,
+  revealFilters,
+} from '../../../src/lib/filters';
 import { sol, starOf, systemOf } from './fixtures';
 
 const near = starOf({ id: 'hyg:1', distLy: 10, spectral: { cls: 'M' } });
@@ -53,5 +58,44 @@ describe('countVisible', () => {
   it('counts visible stars and their distinct systems', () => {
     const mask = computeVisibleMask(stars, systemsById, DEFAULT_FILTERS);
     expect(countVisible(stars, mask)).toEqual({ stars: 4, systems: 3 });
+  });
+});
+
+describe('revealFilters', () => {
+  const far = starOf({ id: 'hyg:9', distLy: 80.2, spectral: { cls: 'M' } });
+
+  it('leaves filters alone when the star already shows', () => {
+    const near = starOf({ id: 'hyg:8', distLy: 10 });
+    expect(revealFilters(near, systemOf(near), DEFAULT_FILTERS)).toEqual(DEFAULT_FILTERS);
+  });
+
+  it('widens the radius, rounding up, and never shrinks it', () => {
+    expect(revealFilters(far, systemOf(far), DEFAULT_FILTERS).radiusLy).toBe(81);
+    const wide = { ...DEFAULT_FILTERS, radiusLy: 90 };
+    expect(revealFilters(far, systemOf(far), wide).radiusLy).toBe(90);
+  });
+
+  it('unhides only the class of the star', () => {
+    const filters = { ...DEFAULT_FILTERS, hiddenClasses: ['M', 'K'] as const };
+    expect(revealFilters(far, systemOf(far), filters).hiddenClasses).toEqual(['K']);
+  });
+
+  it('drops only the system filters the star fails', () => {
+    const filters = { ...DEFAULT_FILTERS, hasPlanets: true, multipleOnly: true };
+    const host = systemOf(far, { planetCount: 2 });
+    expect(revealFilters(far, host, filters)).toMatchObject({
+      hasPlanets: true,
+      multipleOnly: false,
+    });
+    const binary = systemOf(far, { starIds: ['hyg:9', 'hyg:10'] });
+    expect(revealFilters(far, binary, filters)).toMatchObject({
+      hasPlanets: false,
+      multipleOnly: true,
+    });
+  });
+
+  it('never changes filters for Sol, which always shows', () => {
+    const filters = { ...DEFAULT_FILTERS, hiddenClasses: ['G'] as const, hasPlanets: true };
+    expect(revealFilters(sol, systemOf(sol), filters)).toBe(filters);
   });
 });

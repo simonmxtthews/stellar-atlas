@@ -340,7 +340,7 @@ Each milestone is done when every box below is ticked, tests pass and lint is cl
 
 **M4 — Search**
 
-- [ ] `/` focuses; alias normalisation cases pass; `Enter` selects, flies to and opens the modal
+- [x] `/` focuses; alias normalisation cases pass; `Enter` selects, flies to and opens the modal
 
 **M5 — Routes and world**
 

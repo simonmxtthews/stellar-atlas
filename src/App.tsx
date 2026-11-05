@@ -6,6 +6,7 @@ import { Scene } from './scene/Scene';
 import { useCatalogue, type Catalogue } from './store/catalogue';
 import { useUi } from './store/ui';
 import { FilterPanel } from './ui/FilterPanel';
+import { SearchBar } from './ui/SearchBar';
 import { StarModal } from './ui/StarModal';
 import { StarTooltip } from './ui/StarTooltip';
 
@@ -29,6 +30,7 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
         <Scene catalogue={catalogue} mask={mask} />
       </Canvas>
       <FilterPanel stars={catalogue.stars} visible={visible} />
+      <SearchBar catalogue={catalogue} />
       <StarTooltip catalogue={catalogue} />
       <StarModal catalogue={catalogue} />
     </>
