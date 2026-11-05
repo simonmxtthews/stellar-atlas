@@ -1,4 +1,4 @@
-import type { Position } from '../../src/types/catalogue';
+import type { Position, StarMotion } from '../../src/types/catalogue';
 import { equatorialPcToGalacticLy, LY_PER_PC, raDecToEquatorial } from './coords';
 import type { MatchCandidate } from './crossmatch';
 import {
@@ -43,6 +43,7 @@ export interface StarDraft {
   readonly decDeg: number;
   readonly pmRaMasYr?: number;
   readonly pmDecMasYr?: number;
+  readonly motion?: StarMotion;
   readonly mag?: number;
   readonly absMag?: number;
   spectralRaw?: string;
@@ -74,6 +75,23 @@ function nonEmpty(text: string): string | undefined {
 export function isInCatalogue(row: HygRow): boolean {
   const dist = Number(row.dist);
   return row.id === '0' || (dist > 0 && dist < RADIUS_PC);
+}
+
+const roundVelocity = (value: number): number => Number(value.toPrecision(4));
+
+// HYG leaves rv at 0 when it has none, so a true 0 reads as unknown: harmlessly, as rough figures.
+function hygMotion(row: HygRow): StarMotion | undefined {
+  const velocity: Position = [
+    optionalNumber(row.vx) ?? 0,
+    optionalNumber(row.vy) ?? 0,
+    optionalNumber(row.vz) ?? 0,
+  ];
+  if (velocity.every((component) => component === 0)) return undefined;
+  const [x, y, z] = equatorialPcToGalacticLy(velocity);
+  return {
+    velLyPerYear: [roundVelocity(x), roundVelocity(y), roundVelocity(z)],
+    radialKnown: (optionalNumber(row.rv) ?? 0) !== 0,
+  };
 }
 
 export function hygRowToDraft(row: HygRow): StarDraft {
@@ -113,6 +131,7 @@ export function hygRowToDraft(row: HygRow): StarDraft {
   const pmRaMasYr = optionalNumber(row.pmra);
   const pmDecMasYr = optionalNumber(row.pmdec);
   const spectralRaw = nonEmpty(row.spect);
+  const motion = isSol ? undefined : hygMotion(row);
 
   return {
     id: `hyg:${row.id}`,
@@ -131,6 +150,7 @@ export function hygRowToDraft(row: HygRow): StarDraft {
     decDeg: requiredNumber(row.dec, 'dec'),
     ...(pmRaMasYr !== undefined && { pmRaMasYr }),
     ...(pmDecMasYr !== undefined && { pmDecMasYr }),
+    ...(motion && { motion }),
     ...(mag !== undefined && { mag }),
     ...(absMag !== undefined && { absMag }),
     ...(spectralRaw && { spectralRaw }),

@@ -48,7 +48,7 @@ interface UiState {
   readonly autoRouteIds: readonly string[]; // system IDs: start, then end
   readonly referenceStarId: string; // all distances are measured from it
   readonly rangeSphereLy: number | null; // null when off
-  readonly probeYearsAhead: number;
+  readonly yearsAhead: number; // how far past today the map is drawn
   readonly panel: Panel | null;
   readonly expandedRouteId: string | null;
   readonly hiddenRouteIds: readonly string[]; // this session's view, not part of the world
@@ -74,7 +74,7 @@ interface UiState {
   readonly pickAutoRouteSystem: (systemId: string) => void;
   readonly setReference: (starId: string) => void;
   readonly setRangeSphere: (radiusLy: number | null) => void;
-  readonly setProbeYearsAhead: (years: number) => void;
+  readonly setYearsAhead: (years: number) => void;
   readonly endTool: () => void;
   readonly togglePanel: (panel: Panel) => void;
   readonly showRoute: (routeId: string | null) => void;
@@ -103,7 +103,7 @@ export const useUi = create<UiState>()((set) => ({
   autoRouteIds: [],
   referenceStarId: SOL_ID,
   rangeSphereLy: null,
-  probeYearsAhead: 0,
+  yearsAhead: 0,
   panel: null,
   expandedRouteId: null,
   hiddenRouteIds: [],
@@ -185,7 +185,7 @@ export const useUi = create<UiState>()((set) => ({
     }),
   setReference: (referenceStarId) => set({ referenceStarId }),
   setRangeSphere: (rangeSphereLy) => set({ rangeSphereLy }),
-  setProbeYearsAhead: (probeYearsAhead) => set({ probeYearsAhead }),
+  setYearsAhead: (yearsAhead) => set({ yearsAhead }),
   endTool: () => set({ tool: 'none', routeDraft: [], rulerStarIds: [], autoRouteIds: [] }),
   togglePanel: (panel) => set((state) => ({ panel: state.panel === panel ? null : panel })),
   showRoute: (expandedRouteId) =>

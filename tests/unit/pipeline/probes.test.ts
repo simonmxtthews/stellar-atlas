@@ -150,6 +150,20 @@ describe('committed probes.json', () => {
     for (const { distanceLy, year } of found) {
       expect(distanceLy).toBeLessThanOrEqual(5);
       expect(year).toBeGreaterThan(data.epochYear);
+      expect(year).toBeLessThanOrEqual(data.epochYear + 100_000);
     }
+  });
+
+  it('has Voyager 1 pass Gliese 445, which is moving, and not Barnard’s Star, which only lies ahead today', () => {
+    const systems = read<StarSystem[]>('systems.json');
+    const voyager = probe('voyager-1');
+    const near = closestApproaches(voyager, data.epochYear, systems, 3);
+    const gliese445 = near.find(({ system }) => system.name === 'GJ 445');
+    expect(gliese445?.distanceLy).toBeGreaterThan(1.5);
+    expect(gliese445?.distanceLy).toBeLessThan(2.2);
+    expect(gliese445?.year).toBeGreaterThan(40_000);
+    expect(gliese445?.year).toBeLessThan(50_000);
+    expect(gliese445?.rough).toBe(false);
+    expect(near.map(({ system }) => system.name)).not.toContain("Barnard's Star");
   });
 });

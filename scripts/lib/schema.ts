@@ -46,6 +46,7 @@ export const systemSchema = z.strictObject({
   pos: position,
   distLy: z.number().min(0).max(100),
   planetCount: z.number().int().min(0),
+  motion: z.strictObject({ velLyPerYear: position, radialKnown: z.boolean() }).optional(),
 }) satisfies z.ZodType<StarSystem>;
 
 export const planetSchema = z.strictObject({
@@ -192,6 +193,7 @@ export const hygRowSchema = z.object({
   dist: z.string().min(1),
   pmra: z.string(),
   pmdec: z.string(),
+  rv: z.string(),
   mag: z.string(),
   absmag: z.string(),
   spect: z.string(),
@@ -199,6 +201,9 @@ export const hygRowSchema = z.object({
   x: z.string().min(1),
   y: z.string().min(1),
   z: z.string().min(1),
+  vx: z.string(),
+  vy: z.string(),
+  vz: z.string(),
   bayer: z.string(),
   flam: z.string(),
   con: z.string(),

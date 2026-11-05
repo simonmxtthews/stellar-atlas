@@ -8,7 +8,13 @@ import {
   ShaderMaterial,
 } from 'three';
 import { CAMERA_FOV } from '../lib/camera';
-import { FLAG_SUN, FLAG_VISIBLE, writeStarFlags, type StarAttributes } from './starAttributes';
+import {
+  FLAG_SUN,
+  FLAG_VISIBLE,
+  usePositionAttribute,
+  writeStarFlags,
+  type StarAttributes,
+} from './starAttributes';
 
 const MIN_POINT_PX = 3;
 const MAX_POINT_PX = 40;
@@ -85,16 +91,17 @@ interface StarFieldProps {
 export function StarField({ attributes, mask }: StarFieldProps) {
   const flags = useMemo(
     () => new BufferAttribute(new Float32Array(attributes.sizes.length), 1),
-    [attributes],
+    [attributes.sizes.length],
   );
+  const position = usePositionAttribute(attributes.positions);
   const geometry = useMemo(() => {
     const result = new BufferGeometry();
-    result.setAttribute('position', new BufferAttribute(attributes.positions, 3));
+    result.setAttribute('position', position);
     result.setAttribute('aColor', new BufferAttribute(attributes.colors, 3));
     result.setAttribute('aSize', new BufferAttribute(attributes.sizes, 1));
     result.setAttribute('aFlags', flags);
     return result;
-  }, [attributes, flags]);
+  }, [attributes.colors, attributes.sizes, flags, position]);
   const uniforms = useMemo(() => ({ uPixelsPerLy: { value: 1 }, uPixelRatio: { value: 1 } }), []);
   const material = useMemo(
     () =>
@@ -113,7 +120,7 @@ export function StarField({ attributes, mask }: StarFieldProps) {
   // Filters only touch this attribute; the rest of the geometry is never rebuilt.
   useEffect(() => {
     writeStarFlags(flags, mask, attributes.sunIndex);
-  }, [flags, mask, attributes]);
+  }, [flags, mask, attributes.sunIndex]);
 
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => material.dispose(), [material]);

@@ -8,6 +8,7 @@ import { useUi, type Panel } from '../store/ui';
 import { useWorld } from '../store/world';
 import { AboutPanel } from './AboutPanel';
 import { BUTTON_CLASS } from './controlStyles';
+import { MapYearBanner } from './MapYearBanner';
 import type { StarSystem } from '../types/catalogue';
 import { NetworkPanel } from './NetworkPanel';
 import { ProbesPanel } from './ProbesPanel';
@@ -273,6 +274,7 @@ export function Toolbar({
           Redo
         </button>
       </div>
+      <MapYearBanner surfaceClass={SURFACE_CLASS} />
       {tool === 'route' && <RouteBanner catalogue={catalogue} />}
       {tool === 'ruler' && <RulerBanner catalogue={catalogue} />}
       {tool === 'autoroute' && (

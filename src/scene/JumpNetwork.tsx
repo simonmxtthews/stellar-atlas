@@ -11,9 +11,12 @@ import {
 } from '../lib/graph';
 import { useUi } from '../store/ui';
 import { useWorld } from '../store/world';
+import type { StarSystem } from '../types/catalogue';
+import { useMapShift, type MapShift } from './useMapShift';
 
-// One LineSegments for every link, coloured by connected component.
-function networkGeometry(graph: JumpGraph): BufferGeometry {
+// One LineSegments for every link, coloured by connected component. The links are today's, drawn
+// between wherever their stars are on the map.
+function networkGeometry(graph: JumpGraph, shift: MapShift): BufferGeometry {
   const { componentOf } = connectedComponents(graph);
   const pairs = linkPairs(graph);
   const positions = new Float32Array(pairs.length * 6);
@@ -23,7 +26,8 @@ function networkGeometry(graph: JumpGraph): BufferGeometry {
     color.setStyle(componentColor(componentOf[a] ?? 0), '');
     [a, b].forEach((node, end) => {
       const offset = i * 6 + end * 3;
-      positions.set(galacticToScene(graph.nodes[node]?.pos ?? [0, 0, 0]), offset);
+      const system = graph.nodes[node];
+      positions.set(galacticToScene(system ? shift(system.pos, system.id) : [0, 0, 0]), offset);
       colors.set([color.r, color.g, color.b], offset);
     });
   });
@@ -36,14 +40,16 @@ function networkGeometry(graph: JumpGraph): BufferGeometry {
 function NetworkLines({
   systems,
   maxJumpLy,
+  shift,
 }: {
   readonly systems: readonly GraphNode[];
   readonly maxJumpLy: number;
+  readonly shift: MapShift;
 }) {
-  // Recomputed only when the max jump or the visible set changes.
+  // Recomputed only when the max jump, the visible set or the map's year changes.
   const geometry = useMemo(
-    () => networkGeometry(cachedJumpGraph(systems, maxJumpLy)),
-    [maxJumpLy, systems],
+    () => networkGeometry(cachedJumpGraph(systems, maxJumpLy), shift),
+    [maxJumpLy, shift, systems],
   );
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
@@ -53,9 +59,16 @@ function NetworkLines({
   );
 }
 
-export function JumpNetwork({ systems }: { readonly systems: readonly GraphNode[] }) {
+export function JumpNetwork({
+  systems,
+  systemsById,
+}: {
+  readonly systems: readonly GraphNode[];
+  readonly systemsById: ReadonlyMap<string, StarSystem>;
+}) {
   const shown = useUi((state) => state.overlays.jumpNetwork);
   const drive = useWorld((state) => state.world.drive);
+  const shift = useMapShift(systemsById);
   if (!shown || drive.type !== 'jump') return null;
-  return <NetworkLines systems={systems} maxJumpLy={drive.maxJumpLy} />;
+  return <NetworkLines systems={systems} maxJumpLy={drive.maxJumpLy} shift={shift} />;
 }

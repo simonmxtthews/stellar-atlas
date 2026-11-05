@@ -20,7 +20,7 @@ Build a static, local-first web app that renders every known star system within 
 - No backend, accounts or multi-user editing.
 - No live API calls at runtime; all astronomy data is baked at build time.
 - No orbital mechanics or planet-surface rendering.
-- Proper-motion time travel (moving stars by epoch) is a v2 stretch goal, not v1.
+- Proper-motion time travel is display-only: the map's year moves the stars, while distances, travel times and filters stay as of today.
 
 ## Tech stack
 
@@ -117,6 +117,7 @@ export interface StarSystem {
   pos: [number, number, number]; // primary's position
   distLy: number;
   planetCount: number;
+  motion?: { velLyPerYear: [number, number, number]; radialKnown: boolean }; // galactic
 }
 
 export interface Planet {
@@ -278,8 +279,8 @@ FTL multiple k: t = d / (k × c). Jump drive: legs = hops on the shortest path w
 
 - Probes: Voyager 1, Voyager 2, Pioneer 10, Pioneer 11, New Horizons.
 - Data: heliocentric position and velocity at a reference epoch from [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/), fetched by the pipeline into `probes.json`; extrapolate in a straight line (solar gravity is negligible at these distances).
-- Render: a ray from Sol along each heading, plus a marker at the probe's position for a chosen year. Year slider from today to +100,000 years shows distance travelled in ly.
-- Closest-approach table per probe: stars within a set distance of the path, with closest distance (ly) and year. v1 holds star positions fixed; flag this in the UI since proper motion matters over tens of millennia.
+- Render: a ray from Sol along each heading, plus a marker at the probe's position for a chosen year. Year slider from today to +100,000 years shows distance travelled in ly, and sets the year the whole map is drawn in.
+- Closest-approach table per probe: stars within a set distance of the path, with closest distance (ly) and year over the next 100,000 years. Stars move in straight lines at their catalogue velocities, since fixed positions give false encounters at these timescales; mark stars with incomplete motion data as rough. The year slider moves the map's stars, routes and overlays to match, with an indicator and a way back to today, since distances, travel times and filters don't change with it.
 - Pulsar-map layer: the 14 pulsars from the Voyager Golden Record plaque as direction arrows at the map edge (they lie far beyond 100 ly), each labelled with its plaque period. Source the directions from published catalogue positions, not hand-typed values.
 
 ## Rendering and performance

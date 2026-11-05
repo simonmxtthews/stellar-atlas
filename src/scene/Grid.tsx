@@ -2,7 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, ShaderMaterial } from 'three';
 import { galacticToScene } from '../lib/coords';
 import { useUi } from '../store/ui';
-import type { Star } from '../types/catalogue';
+import type { Position } from '../types/catalogue';
+import { usePositionAttribute } from './starAttributes';
 import {
   dropLineVertices,
   gridVertices,
@@ -40,10 +41,10 @@ function GalacticGrid({ radiusLy }: { readonly radiusLy: number }) {
 // Rings count distance from the reference star, on a plane through it parallel to the galaxy's.
 function RangeRings({
   radiusLy,
-  reference,
+  center,
 }: {
   readonly radiusLy: number;
-  readonly reference?: Star;
+  readonly center: Position;
 }) {
   const { minor, major } = useMemo(() => {
     const radii = ringRadii(radiusLy);
@@ -53,7 +54,7 @@ function RangeRings({
       major: ringVertices(radii.filter((radius) => radius % 25 === 0)),
     };
   }, [radiusLy]);
-  const [x, y, z] = galacticToScene(reference?.pos ?? [0, 0, 0]);
+  const [x, y, z] = galacticToScene(center);
   return (
     <group position={[x, y, z]}>
       <PlaneLines vertices={minor} color="#5b9bd5" opacity={0.35} />
@@ -87,14 +88,16 @@ function DropLines({
 }) {
   const visibility = useMemo(
     () => new BufferAttribute(new Float32Array((positions.length / 3) * 2), 1),
-    [positions],
+    [positions.length],
   );
+  const vertices = useMemo(() => dropLineVertices(positions), [positions]);
+  const position = usePositionAttribute(vertices);
   const geometry = useMemo(() => {
     const result = new BufferGeometry();
-    result.setAttribute('position', new BufferAttribute(dropLineVertices(positions), 3));
+    result.setAttribute('position', position);
     result.setAttribute('aVisible', visibility);
     return result;
-  }, [positions, visibility]);
+  }, [position, visibility]);
   const material = useMemo(
     () =>
       new ShaderMaterial({
@@ -119,18 +122,18 @@ function DropLines({
 export function Grid({
   positions,
   mask,
-  reference,
+  center,
 }: {
   readonly positions: Float32Array;
   readonly mask: Uint8Array;
-  readonly reference?: Star;
+  readonly center: Position; // the reference star's position on the map
 }) {
   const overlays = useUi((state) => state.overlays);
   const radiusLy = useUi((state) => state.filters.radiusLy);
   return (
     <>
       {overlays.grid && <GalacticGrid radiusLy={radiusLy} />}
-      {overlays.rings && <RangeRings radiusLy={radiusLy} reference={reference} />}
+      {overlays.rings && <RangeRings radiusLy={radiusLy} center={center} />}
       {overlays.dropLines && <DropLines positions={positions} mask={mask} />}
     </>
   );

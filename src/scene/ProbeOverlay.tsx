@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, Quaternion, Vector3 } from 'three';
 import { galacticToScene } from '../lib/coords';
 import { MAX_RADIUS_LY } from '../lib/filters';
-import { labelText, LABEL_GAP_EM, LABEL_PX } from '../lib/labels';
+import { LabelTier, labelStyle, labelText } from '../lib/labels';
 import { PROBE_COLORS, probePathEnd, probePositionAt } from '../lib/probes';
 import { useUi } from '../store/ui';
 import type { Position, ProbeData, Pulsar } from '../types/catalogue';
@@ -10,6 +10,7 @@ import { Beacons } from './Highlights';
 import { ScreenText, useLabelMaterial } from './Labels';
 import { Polyline } from './Routes';
 
+const OVERLAY_LABEL = labelStyle(LabelTier.Tagged); // the map's own colours are set per label
 const SOL: Position = [0, 0, 0];
 const PULSAR_COLOR = '#f0abfc';
 const ARROW_LENGTH_FRACTION = 0.12;
@@ -17,7 +18,7 @@ const CONE_LENGTH_FRACTION = 0.03;
 const UP = new Vector3(0, 1, 0);
 
 function ProbePaths({ probeData }: { readonly probeData: ProbeData }) {
-  const yearsAhead = useUi((state) => state.probeYearsAhead);
+  const yearsAhead = useUi((state) => state.yearsAhead);
   const material = useLabelMaterial();
   const { probes, epochYear } = probeData;
   const paths = useMemo(
@@ -53,8 +54,8 @@ function ProbePaths({ probeData }: { readonly probeData: ProbeData }) {
             x={x}
             y={y}
             z={z}
-            px={LABEL_PX}
-            offset={[LABEL_GAP_EM, 0]}
+            px={OVERLAY_LABEL.px}
+            offset={[OVERLAY_LABEL.gapEm, 0]}
             text={labelText(probe.name)}
             color={PROBE_COLORS[i] ?? PROBE_COLORS[0]}
             material={material}
@@ -87,8 +88,8 @@ function PulsarArrow({ pulsar, edgeLy }: { readonly pulsar: Pulsar; readonly edg
         x={label.x}
         y={label.y}
         z={label.z}
-        px={LABEL_PX}
-        offset={[LABEL_GAP_EM, 0]}
+        px={OVERLAY_LABEL.px}
+        offset={[OVERLAY_LABEL.gapEm, 0]}
         text={labelText(`${pulsar.id} ${pulsar.plaquePeriodS.toFixed(4)} s`)}
         color={PULSAR_COLOR}
         material={material}

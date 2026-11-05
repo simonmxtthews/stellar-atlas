@@ -4,16 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { memo, useEffect, useMemo, useRef } from 'react';
 import { MathUtils, Matrix4, MeshBasicMaterial, type Group } from 'three';
 import { CAMERA_FOV } from '../lib/camera';
-import {
-  chooseLabels,
-  LABEL_GAP_EM,
-  LABEL_PX,
-  LabelTier,
-  labelText,
-  SELECTED_LABEL_GAP_EM,
-  SELECTED_LABEL_PX,
-  type LabelCandidate,
-} from '../lib/labels';
+import { chooseLabels, LabelTier, labelStyle, labelText, type LabelCandidate } from '../lib/labels';
 import { galacticToScene } from '../lib/coords';
 import { distanceLy, routeLegs, type RouteLeg } from '../lib/routes';
 import { formatTravelTime, legTravelTime } from '../lib/travel';
@@ -34,6 +25,7 @@ import { useAutoRoutePath } from '../ui/useAutoRoute';
 import { AUTO_ROUTE_COLOR, DRAFT_COLOR, RULER_COLOR } from './Routes';
 import { starPosition } from './starAttributes';
 import type { SystemAnchor } from './systemAnchors';
+import { useMapShift, type MapShift } from './useMapShift';
 
 const BADGE_PX = 13;
 const BADGE_COLOR = '#f8fafc'; // a tag colour would vanish against its own halo
@@ -114,29 +106,41 @@ export function useLabelMaterial(): MeshBasicMaterial {
   return material;
 }
 
+interface LegLabel {
+  readonly id: string;
+  readonly text: string;
+  readonly color: string;
+  readonly tier: LabelTier;
+  readonly leg: RouteLeg;
+}
+
+// Its travel time takes a path search, so this holds whatever doesn't change with the map's year.
 function legLabels(
   prefix: string,
   legs: readonly RouteLeg[],
   color: string,
   drive: DriveModel,
   systems: readonly StarSystem[],
-): readonly LabelCandidate[] {
-  return legs.map((leg, i) => {
-    const [x, y, z] = galacticToScene([
-      (leg.from[0] + leg.to[0]) / 2,
-      (leg.from[1] + leg.to[1]) / 2,
-      (leg.from[2] + leg.to[2]) / 2,
-    ]);
-    return {
-      id: `leg:${prefix}:${i}`,
-      tier: LabelTier.RouteEndpoint,
-      color,
-      x,
-      y,
-      z,
-      text: `${formatValue(leg.distanceLy, 2, 'ly')} · ${formatTravelTime(legTravelTime(drive, systems, leg))}`,
-    };
-  });
+): readonly LegLabel[] {
+  return legs.map((leg, i) => ({
+    id: `leg:${prefix}:${i}`,
+    tier: LabelTier.RouteEndpoint,
+    color,
+    leg,
+    text: `${formatValue(leg.distanceLy, 2, 'ly')} · ${formatTravelTime(legTravelTime(drive, systems, leg))}`,
+  }));
+}
+
+// Placed where the leg is drawn; its text stays as of today.
+function placedLegLabel({ leg, ...label }: LegLabel, shift: MapShift): LabelCandidate {
+  const from = shift(leg.from, leg.fromId);
+  const to = shift(leg.to, leg.toId);
+  const [x, y, z] = galacticToScene([
+    (from[0] + to[0]) / 2,
+    (from[1] + to[1]) / 2,
+    (from[2] + to[2]) / 2,
+  ]);
+  return { ...label, x, y, z };
 }
 
 interface LabelsProps {
@@ -166,6 +170,7 @@ export function Labels({
   const starMeta = useWorld((state) => state.world.starMeta);
   const drive = useWorld((state) => state.world.drive);
   const autoRoutePath = useAutoRoutePath(catalogue, visibleSystems);
+  const shift = useMapShift(systemsById);
   const material = useLabelMaterial();
 
   const shownRoutes = useMemo(
@@ -209,8 +214,8 @@ export function Labels({
     starsById,
   ]);
 
-  const candidates = useMemo(() => {
-    const legs = shownRoutes.flatMap((route) =>
+  const legs = useMemo(() => {
+    const saved = shownRoutes.flatMap((route) =>
       legLabels(route.id, routeLegs(route.waypoints, systemsById), route.color, drive, systems),
     );
     const draft = legLabels(
@@ -228,7 +233,7 @@ export function Labels({
       systems,
     );
     const [rulerFrom, rulerTo] = rulerStarIds.map((id) => starsById.get(id));
-    const ruler: readonly LabelCandidate[] =
+    const ruler: readonly LegLabel[] =
       rulerFrom && rulerTo
         ? legLabels(
             'ruler',
@@ -246,7 +251,7 @@ export function Labels({
             systems,
           ).map((label) => ({ ...label, tier: LabelTier.Selected }))
         : [];
-    return [...systemCandidates, ...legs, ...draft, ...autoRoute, ...ruler];
+    return [...saved, ...draft, ...autoRoute, ...ruler];
   }, [
     autoRoutePath,
     drive,
@@ -254,10 +259,14 @@ export function Labels({
     rulerStarIds,
     shownRoutes,
     starsById,
-    systemCandidates,
     systems,
     systemsById,
   ]);
+
+  const candidates = useMemo(
+    () => [...systemCandidates, ...legs.map((label) => placedLegLabel(label, shift))],
+    [legs, shift, systemCandidates],
+  );
 
   // Only on camera rest, a resize or a change of candidates, never per frame.
   const labels = useMemo(() => {
@@ -274,17 +283,17 @@ export function Labels({
   useEffect(() => setLabelCount(labels.length), [labels, setLabelCount]);
 
   return labels.map((label) => {
-    const selected = label.tier === LabelTier.Selected;
+    const { px, gapEm, color } = labelStyle(label.tier);
     return (
       <ScreenText
         key={label.id}
         x={label.x}
         y={label.y}
         z={label.z}
-        px={selected ? SELECTED_LABEL_PX : LABEL_PX}
-        offset={[selected ? SELECTED_LABEL_GAP_EM : LABEL_GAP_EM, 0]}
+        px={px}
+        offset={[gapEm, 0]}
         text={label.text}
-        color={label.color ?? (selected ? '#e0f2fe' : '#94a3b8')}
+        color={label.color ?? color}
         material={material}
       />
     );

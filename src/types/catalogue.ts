@@ -43,6 +43,11 @@ export interface Star {
   readonly source: 'hyg' | 'exoplanet-archive' | 'override';
 }
 
+export interface StarMotion {
+  readonly velLyPerYear: Position; // galactic
+  readonly radialKnown: boolean; // without a radial velocity, this is motion across the sky only
+}
+
 export interface StarSystem {
   readonly id: string;
   readonly name: string; // e.g. 'Alpha Centauri'
@@ -50,6 +55,7 @@ export interface StarSystem {
   readonly pos: Position; // primary's position
   readonly distLy: number;
   readonly planetCount: number;
+  readonly motion?: StarMotion; // absent where no source gives one
 }
 
 export interface Planet {

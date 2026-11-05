@@ -106,6 +106,11 @@ function logReport(
   );
   console.log(`  Systems: ${systems.length} (${multiple.length} multiple)`);
   console.log(
+    `  Motion:  ${systems.filter((system) => system.motion?.radialKnown).length} full, ` +
+      `${systems.filter((system) => system.motion && !system.motion.radialKnown).length} without ` +
+      `radial velocity, ${systems.filter((system) => !system.motion).length} none`,
+  );
+  console.log(
     `  Planets: ${planets.length} on ${result.matches.length + result.unmatchedHosts.length} hosts`,
   );
   console.log(

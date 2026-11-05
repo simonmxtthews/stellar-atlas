@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { assemble } from '../../../scripts/lib/assemble';
 import type { ArchiveHost, StarDraft } from '../../../scripts/lib/drafts';
+import { LY_PER_PC } from '../../../scripts/lib/coords';
 import { RADIUS_PC, hygRowToDraft, isInCatalogue, rowsToHosts } from '../../../scripts/lib/drafts';
 import type { ExoplanetRow, HygRow } from '../../../scripts/lib/schema';
 
@@ -52,6 +53,11 @@ const planetRow = (hostname: string, fields: Partial<ExoplanetRow> = {}): Exopla
   ...fields,
 });
 
+// The rotation is orthogonal, so its first row is the galactic +X axis in equatorial coordinates.
+const equatorialFromGalacticX = (): readonly [number, number, number] => [
+  -0.0548755604, -0.8734370902, -0.4838350155,
+];
+
 const hygRow = (fields: Partial<HygRow>): HygRow => ({
   id: '1',
   hip: '',
@@ -64,6 +70,7 @@ const hygRow = (fields: Partial<HygRow>): HygRow => ({
   dist: '10',
   pmra: '0',
   pmdec: '0',
+  rv: '',
   mag: '5',
   absmag: '5',
   spect: 'G2V',
@@ -71,6 +78,9 @@ const hygRow = (fields: Partial<HygRow>): HygRow => ({
   x: '10',
   y: '0',
   z: '0',
+  vx: '',
+  vy: '',
+  vz: '',
   bayer: '',
   flam: '',
   con: '',
@@ -83,6 +93,25 @@ const hygRow = (fields: Partial<HygRow>): HygRow => ({
 const noHosts = { hosts: [], planetRows: [], knownMissingHosts: [] };
 
 describe('HYG rows', () => {
+  it('turns HYG velocities into galactic light-years per year, and notes a missing radial', () => {
+    // Along the galactic centre direction, 1 pc/yr is one parsec's worth of +X per year.
+    const toCentre = equatorialFromGalacticX();
+    const { motion } = hygRowToDraft(
+      hygRow({ vx: `${toCentre[0]}`, vy: `${toCentre[1]}`, vz: `${toCentre[2]}`, rv: '-20.5' }),
+    );
+    expect(motion?.velLyPerYear[0]).toBeCloseTo(LY_PER_PC, 3);
+    expect(motion?.velLyPerYear[1]).toBeCloseTo(0, 3);
+    expect(motion?.velLyPerYear[2]).toBeCloseTo(0, 3);
+    expect(motion?.radialKnown).toBe(true);
+    expect(hygRowToDraft(hygRow({ vx: '0.00001', rv: '0.0' })).motion?.radialKnown).toBe(false);
+  });
+
+  it('gives no motion to the Sun or to a star with no velocity on record', () => {
+    expect(hygRowToDraft(hygRow({})).motion).toBeUndefined();
+    expect(hygRowToDraft(hygRow({ vx: '0.00000000', vy: '0.0', vz: '0' })).motion).toBeUndefined();
+    expect(hygRowToDraft(hygRow({ id: '0', dist: '0', vx: '0.1' })).motion).toBeUndefined();
+  });
+
   it('drops unknown distances and anything past 100 ly but keeps the Sun', () => {
     expect(isInCatalogue(hygRow({ id: '0', dist: '0' }))).toBe(true);
     expect(isInCatalogue(hygRow({ dist: '100000' }))).toBe(false);
@@ -143,6 +172,32 @@ describe('rowsToHosts', () => {
 });
 
 describe('assemble', () => {
+  it('gives a system the best motion among its stars, primary first', () => {
+    const rough = { velLyPerYear: [1e-5, 0, 0], radialKnown: false } as const;
+    const full = { velLyPerYear: [2e-5, 0, 0], radialKnown: true } as const;
+    const motionOf = (primaryFields: Partial<StarDraft>, companionFields: Partial<StarDraft>) => {
+      const primary = draft('hyg:1', { mag: 1, ...primaryFields });
+      const companion = draft('hyg:2', {
+        mag: 5,
+        compPrimaryId: 'hyg:1',
+        ...companionFields,
+      });
+      const { systems } = assemble({
+        drafts: [primary, companion],
+        hosts: [],
+        planetRows: [],
+        knownMissingHosts: [],
+      });
+      return systems[0]?.motion;
+    };
+    expect(motionOf({ motion: full }, { motion: { ...full, velLyPerYear: [9, 9, 9] } })).toEqual(
+      full,
+    );
+    expect(motionOf({ motion: rough }, { motion: full })).toEqual(full);
+    expect(motionOf({}, { motion: rough })).toEqual(rough);
+    expect(motionOf({}, {})).toBeUndefined();
+  });
+
   it('fails the build on an unexplained host within 30 ly', () => {
     expect(() =>
       assemble({

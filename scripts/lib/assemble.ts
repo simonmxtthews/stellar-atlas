@@ -234,10 +234,15 @@ export function assemble(input: AssembleInput): AssembleResult {
     .sort((a, b) => a.distLy - b.distLy || a.id.localeCompare(b.id));
   const starsById = new Map(stars.map((star) => [star.id, star]));
 
+  const draftOf = new Map(drafts.map((draft) => [draft.id, draft]));
   const systems = groups
     .map((group): StarSystem => {
       const primary = starsById.get(group.primaryId);
       if (!primary) throw new Error(`Missing primary ${group.primaryId}`);
+      // Companions travel together, so any star's motion serves. The best measured wins, primary
+      // first, as a companion may have what its primary lacks.
+      const motions = group.starIds.flatMap((id) => draftOf.get(id)?.motion ?? []);
+      const motion = motions.find(({ radialKnown }) => radialKnown) ?? motions[0];
       return {
         id: `sys:${group.primaryId}`,
         name:
@@ -251,6 +256,7 @@ export function assemble(input: AssembleInput): AssembleResult {
           (count, id) => count + (starsById.get(id)?.planetIds.length ?? 0),
           0,
         ),
+        ...(motion && { motion }),
       };
     })
     .sort((a, b) => a.distLy - b.distLy || a.id.localeCompare(b.id));
