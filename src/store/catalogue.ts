@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Planet, Star, StarSystem } from '../types/catalogue';
+import type { Planet, ProbeData, Star, StarSystem } from '../types/catalogue';
 
 export interface Catalogue {
   readonly stars: readonly Star[];
@@ -9,6 +9,7 @@ export interface Catalogue {
   readonly systemsById: ReadonlyMap<string, StarSystem>;
   readonly planetsById: ReadonlyMap<string, Planet>;
   readonly idMap?: Readonly<Record<string, string>>; // meta.json: IDs that changed in a rebuild
+  readonly probeData: ProbeData;
 }
 
 interface CatalogueState {
@@ -34,8 +35,9 @@ export const useCatalogue = create<CatalogueState>()((set) => ({
       fetchJson<readonly StarSystem[]>('systems.json'),
       fetchJson<readonly Planet[]>('planets.json'),
       fetchJson<{ readonly idMap?: Readonly<Record<string, string>> }>('meta.json'),
+      fetchJson<ProbeData>('probes.json'),
     ]).then(
-      ([stars, systems, planets, meta]) => {
+      ([stars, systems, planets, meta, probeData]) => {
         set({
           catalogue: {
             stars,
@@ -45,6 +47,7 @@ export const useCatalogue = create<CatalogueState>()((set) => ({
             systemsById: new Map(systems.map((system) => [system.id, system])),
             planetsById: new Map(planets.map((planet) => [planet.id, planet])),
             idMap: meta.idMap ?? {},
+            probeData,
           },
         });
       },

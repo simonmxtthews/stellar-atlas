@@ -9,11 +9,15 @@ import {
   HOME_TARGET,
 } from '../../src/lib/camera';
 import { galacticToScene } from '../../src/lib/coords';
-import type { Star } from '../../src/types/catalogue';
+import type { Star, StarSystem } from '../../src/types/catalogue';
 
 const stars = JSON.parse(
   readFileSync(new URL('../../public/data/stars.json', import.meta.url), 'utf8'),
 ) as readonly Star[];
+
+const systems = JSON.parse(
+  readFileSync(new URL('../../public/data/systems.json', import.meta.url), 'utf8'),
+) as readonly StarSystem[];
 
 const PANEL_WIDTH_PX = 280;
 const MODAL_WIDTH_PX = 440;
@@ -121,7 +125,7 @@ function isolatedStars(page: Page, keep?: (star: Star) => boolean): readonly Sta
       a.star.id !== 'hyg:0' &&
       a.x > PANEL_WIDTH_PX &&
       a.x < width - MODAL_WIDTH_PX &&
-      a.y > 40 &&
+      a.y > 64 && // below the toolbar
       a.y < height - 40 &&
       projected.every((b) => b === a || Math.hypot(a.x - b.x, a.y - b.y) > 30),
   );
@@ -563,7 +567,7 @@ test('a 3-stop route draws, shows its distances, and persists through a reload',
 test('a hidden route leaves the map, and a deleted one can be undone', async ({ page }) => {
   await openMap(page);
   // Below the toolbar, whose Undo button lights up once there is an edit.
-  const map = { clip: { x: 0, y: 40, width: 1280, height: 680 } };
+  const map = { clip: { x: 0, y: 64, width: 1280, height: 656 } };
   await restPointer(page);
   const before = await page.screenshot(map);
   await buildRoute(page);
@@ -601,9 +605,10 @@ test('the ruler measures two stars and saves nothing', async ({ page }) => {
   await page.mouse.click(first.x, first.y);
   await expect(readout).toContainText('pick a second star');
   await page.mouse.click(second.x, second.y);
-  await expect(readout).toHaveText(
-    `${first.star.displayName} → ${second.star.displayName}: ${lightYears(first.star, second.star).toFixed(2)} ly`,
+  await expect(readout).toContainText(
+    `${first.star.displayName} → ${second.star.displayName}: ${lightYears(first.star, second.star).toFixed(2)} ly · `,
   );
+  await expect(readout).toContainText(/jump/);
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await restPointer(page);
   await expectChanged(page, await canvasShot(page), before);
@@ -738,6 +743,169 @@ test('import reports unknown IDs without failing, and rejects a broken file', as
   await expect(page.getByTestId('unknown-ids')).toContainText('hyg:not-a-star');
   await page.getByRole('button', { name: 'Replace this world' }).click();
   await expect(page.getByLabel('World name')).toHaveValue('Stale');
+});
+
+test('the drive model updates every travel time, and persists', async ({ page }) => {
+  await openMap(page);
+  await buildRoute(page);
+  const time = page.getByTestId('route-time');
+  await expect(time).toContainText('jump');
+
+  await page.getByRole('button', { name: 'Drive' }).click();
+  const calculator = page.getByTestId('calculator-result');
+  await expect(calculator).toContainText('4.37 ly: at least 1 jump · 7.0 d');
+  await page.getByLabel('Days per jump').fill('14');
+  await expect(calculator).toContainText('1 jump · 14 d');
+
+  await page.getByLabel('Drive model').selectOption('sublight');
+  await page.getByLabel('Constant acceleration').check();
+  await expect(calculator).toContainText('ship 3.58 yr · Earth 6.00 yr');
+
+  await page.getByLabel('Drive model').selectOption('ftl-speed');
+  await page.getByLabel('Speed (multiple of c)').fill('');
+  await expect(page.getByLabel('Speed (multiple of c)')).toHaveAttribute('aria-invalid', 'true');
+  await page.getByLabel('Speed (multiple of c)').fill('100');
+  await expect(calculator).toContainText('4.37 ly: 16 d');
+
+  await page.getByRole('button', { name: 'Routes' }).click();
+  await expect(time).not.toContainText('jump');
+  await expect(page.getByTestId('leg-distance').first()).not.toContainText('jump');
+
+  await page.reload();
+  await expect(page.getByTestId('visible-count')).toBeVisible();
+  await page.getByRole('button', { name: 'Drive' }).click();
+  await expect(page.getByLabel('Speed (multiple of c)')).toHaveValue('100');
+});
+
+test('the jump network draws in component colours and follows the max jump', async ({ page }) => {
+  await openMap(page);
+  await page.getByRole('button', { name: 'Network' }).click();
+  const off = await canvasShot(page);
+  await page.getByLabel('Show jump network').check();
+  await expectChanged(page, await canvasShot(page), off);
+  const stats = page.getByTestId('network-stats');
+  await expect(stats).toContainText('within 10 ly');
+  const atTen = await stats.textContent();
+
+  await page.getByRole('button', { name: 'Drive' }).click();
+  await page.getByLabel(/Max jump/).fill('5');
+  await page.getByRole('button', { name: 'Network' }).click();
+  await expect(stats).toContainText('within 5 ly');
+  expect(await stats.textContent()).not.toBe(atTen);
+  await expect(
+    page.getByRole('list', { name: 'Largest clusters' }).getByRole('listitem'),
+  ).not.toHaveCount(1);
+});
+
+test('hubs rank in a worker, and an auto-route previews then saves', async ({ page }) => {
+  const workers: string[] = [];
+  page.on('worker', (worker) => workers.push(worker.url()));
+  await openMap(page);
+  await page.getByRole('button', { name: 'Network' }).click();
+  await page.getByRole('button', { name: 'Rank hubs' }).click();
+  await expect(page.getByRole('list', { name: 'Hubs' }).getByRole('listitem')).toHaveCount(10);
+  expect(workers.filter((url) => url.includes('hubs.worker'))).toHaveLength(1);
+  await page.getByRole('button', { name: 'Network' }).click();
+
+  const [first, second] = threeStops(page);
+  await page.keyboard.press('a');
+  const plan = page.getByTestId('auto-route-plan');
+  await page.mouse.click(first.x, first.y);
+  await expect(plan).toContainText('pick an end system');
+  await page.mouse.click(second.x, second.y);
+  await expect(plan).toContainText(' → ');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  const total = (await page.getByTestId('auto-route-total').textContent()) ?? '';
+  const jumps = Number(/(\d+) jumps?/.exec(total)?.[1]);
+  const stops = ((await plan.textContent()) ?? '').split(' → ').length;
+  expect(jumps).toBe(stops - 1);
+
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('complementary', { name: 'Route panel' })).toBeVisible();
+  await expect(page.getByTestId('leg-distance')).toHaveCount(stops - 1);
+  for (const leg of await page.getByTestId('leg-distance').all()) {
+    await expect(leg).toContainText('1 jump');
+  }
+});
+
+test('a reference star moves the distances, and a range sphere lists what is inside', async ({
+  page,
+}) => {
+  await openMap(page);
+  const pick = isolatedStar(page);
+  const sirius = stars.find((star) => star.displayName === 'Sirius');
+  if (!sirius) throw new Error('No Sirius');
+  const siriusSystem = systems.find((system) => system.id === sirius.systemId);
+  if (!siriusSystem) throw new Error('No Sirius system');
+
+  await page.mouse.click(pick.x, pick.y);
+  const modal = page.getByRole('dialog', { name: pick.star.displayName });
+  await modal.getByRole('button', { name: 'Set as reference' }).click();
+  await expect(page.getByTestId('reference-star')).toContainText(pick.star.displayName);
+
+  const expected = stars.filter(
+    (star) => star.id === 'hyg:0' || lightYears(star, pick.star) <= 50,
+  ).length;
+  expect(await visibleStars(page)).toBe(expected);
+
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('/');
+  await page.keyboard.type('sirius');
+  await expect(page.getByRole('option').first()).toContainText(
+    `${lightYears(sirius, pick.star).toFixed(2)} ly`,
+  );
+  await page.keyboard.press('Enter');
+  const siriusModal = page.getByRole('dialog', { name: 'Sirius' });
+  await expect(siriusModal.getByText(`Distance from ${pick.star.displayName}`)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Back to Sol' }).click();
+  expect(await visibleStars(page)).toBeGreaterThan(0);
+  await expect(siriusModal.getByText(`Distance from ${pick.star.displayName}`)).toHaveCount(0);
+
+  await siriusModal.getByRole('button', { name: 'Show range sphere' }).click();
+  await siriusModal.getByLabel('Range sphere radius').fill('5');
+  const inside = systems.filter(
+    (system) =>
+      system.id !== siriusSystem.id &&
+      Math.hypot(
+        system.pos[0] - siriusSystem.pos[0],
+        system.pos[1] - siriusSystem.pos[1],
+        system.pos[2] - siriusSystem.pos[2],
+      ) <= 5,
+  );
+  await expect(page.getByTestId('range-count')).toContainText(`${inside.length} system`);
+  await expect(
+    page.getByRole('list', { name: 'Systems in range' }).getByRole('listitem'),
+  ).toHaveCount(inside.length);
+});
+
+test('probe trajectories, the year slider, the approach table and the pulsar map', async ({
+  page,
+}) => {
+  await openMap(page);
+  await page.getByRole('button', { name: 'Probes' }).click();
+  const panel = page.getByRole('complementary', { name: 'Probes panel' });
+  const off = await canvasShot(page);
+  await panel.getByLabel('Show probe trajectories').check();
+  const paths = await canvasShot(page);
+  await expectChanged(page, paths, off);
+
+  const voyager = page.getByTestId('probe-row').filter({ hasText: 'Voyager 1' });
+  await expect(voyager).toContainText('0.000 ly');
+  await panel.getByLabel('Probe year').fill('100000');
+  // 16.9 km/s for 100,000 years.
+  await expect(voyager).toContainText('5.64');
+  await expect(page.getByTestId('fixed-stars-note')).toContainText('Proper motion');
+
+  await panel.getByLabel('Approach distance').fill('10');
+  const table = panel.getByRole('region', { name: 'Voyager 1 closest approaches' });
+  await expect(table.getByRole('row').nth(1)).toBeVisible();
+
+  const withoutPulsars = await canvasShot(page);
+  await panel.getByLabel('Show pulsar map').check();
+  await expectChanged(page, await canvasShot(page), withoutPulsars);
 });
 
 test.describe('touch', () => {

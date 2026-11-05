@@ -1,9 +1,11 @@
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
 import { AdditiveBlending, BufferAttribute, BufferGeometry, Color, ShaderMaterial } from 'three';
+import { galacticToScene } from '../lib/coords';
 import { starHalos, type StarHalo } from '../lib/worldView';
 import { useUi } from '../store/ui';
 import { useWorld } from '../store/world';
+import type { Position } from '../types/catalogue';
 import type { SystemAnchor } from './systemAnchors';
 
 const RING_PX = 44;
@@ -196,6 +198,57 @@ export function TagHalos({ positions, mask, starIndexById }: TagHalosProps) {
   useEffect(() => {
     writeHalos(halo, starHalos(starMeta, tags), starIndexById, mask);
   }, [halo, mask, starIndexById, starMeta, tags]);
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => material.dispose(), [material]);
+
+  useFrame(({ viewport }) => updateHaloScale(uniforms, viewport.dpr));
+
+  return <points geometry={geometry} material={material} frustumCulled={false} renderOrder={1} />;
+}
+
+export interface Beacon {
+  readonly pos: Position; // galactic
+  readonly color: string;
+}
+
+// Halos at arbitrary points, for things that aren't tagged stars. Few, and rebuilt as they move.
+export function Beacons({ beacons }: { readonly beacons: readonly Beacon[] }) {
+  const geometry = useMemo(() => {
+    const color = new Color();
+    const result = new BufferGeometry();
+    result.setAttribute(
+      'position',
+      new BufferAttribute(Float32Array.from(beacons.flatMap(({ pos }) => galacticToScene(pos))), 3),
+    );
+    result.setAttribute(
+      'aHalo',
+      new BufferAttribute(
+        Float32Array.from(
+          beacons.flatMap(({ color: hex }) => {
+            color.setStyle(hex, '');
+            return [color.r, color.g, color.b, 1];
+          }),
+        ),
+        4,
+      ),
+    );
+    return result;
+  }, [beacons]);
+  const uniforms = useMemo(() => ({ uPixelRatio: { value: 1 } }), []);
+  const material = useMemo(
+    () =>
+      new ShaderMaterial({
+        vertexShader: haloVertexShader,
+        fragmentShader: haloFragmentShader,
+        uniforms,
+        blending: AdditiveBlending,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+      }),
+    [uniforms],
+  );
 
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => material.dispose(), [material]);

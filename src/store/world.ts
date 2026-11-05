@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware';
 import { mergeWorlds, parseWorld, remapWorldIds } from '../lib/io';
 import { movedWaypoints, withoutWaypoint } from '../lib/routes';
-import type { Route, StarMeta, Tag, World } from '../types/world';
+import type { DriveModel, Route, StarMeta, Tag, World } from '../types/world';
 
 const STORAGE_KEY = 'stellar-atlas-worlds';
 const UNLOAD_KEY = `${STORAGE_KEY}-unload`;
@@ -40,6 +40,7 @@ export interface WorldState extends Persisted {
   readonly undo: () => void;
   readonly redo: () => void;
   readonly renameWorld: (name: string) => void;
+  readonly setDrive: (drive: DriveModel, field?: string) => void;
   readonly createWorld: (name: string) => void;
   readonly switchWorld: (id: string) => void;
   readonly deleteWorld: () => void;
@@ -194,6 +195,8 @@ export const useWorld = create<WorldState>()(
         },
 
         renameWorld: (name) => edit((world) => ({ ...world, name }), 'world-name'),
+        setDrive: (drive, field) =>
+          edit((world) => ({ ...world, drive }), field && `drive:${field}`),
         createWorld: (name) => {
           const { worldId, world, otherWorlds } = get();
           lastEdit = null;

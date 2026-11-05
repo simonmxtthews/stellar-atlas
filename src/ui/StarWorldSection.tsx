@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { useUi } from '../store/ui';
+import { SOL_ID } from '../lib/filters';
+import { DEFAULT_RANGE_SPHERE_LY, useUi } from '../store/ui';
 import { useWorld } from '../store/world';
 import type { Star } from '../types/catalogue';
 import { BUTTON_CLASS, FIELD_LABEL_CLASS, INPUT_CLASS } from './controlStyles';
@@ -13,6 +14,10 @@ export function StarWorldSection({ star }: { readonly star: Star }) {
   const toggleStarTag = useWorld((state) => state.toggleStarTag);
   const addTag = useWorld((state) => state.addTag);
   const startRoute = useUi((state) => state.startRoute);
+  const referenceStarId = useUi((state) => state.referenceStarId);
+  const setReference = useUi((state) => state.setReference);
+  const rangeSphereLy = useUi((state) => state.rangeSphereLy);
+  const setRangeSphere = useUi((state) => state.setRangeSphere);
   const [newTag, setNewTag] = useState('');
 
   const createTag = (event: FormEvent) => {
@@ -80,13 +85,27 @@ export function StarWorldSection({ star }: { readonly star: Star }) {
         />
       </label>
 
-      <button
-        type="button"
-        onClick={() => startRoute(star.systemId)}
-        className={`${BUTTON_CLASS} mt-2`}
-      >
-        Start route here
-      </button>
+      <div className="mt-2 flex flex-wrap gap-1">
+        <button type="button" onClick={() => startRoute(star.systemId)} className={BUTTON_CLASS}>
+          Start route here
+        </button>
+        <button
+          type="button"
+          aria-pressed={referenceStarId === star.id}
+          onClick={() => setReference(referenceStarId === star.id ? SOL_ID : star.id)}
+          className={BUTTON_CLASS}
+        >
+          Set as reference
+        </button>
+        <button
+          type="button"
+          aria-pressed={rangeSphereLy !== null}
+          onClick={() => setRangeSphere(rangeSphereLy === null ? DEFAULT_RANGE_SPHERE_LY : null)}
+          className={BUTTON_CLASS}
+        >
+          Show range sphere
+        </button>
+      </div>
     </ModalSection>
   );
 }

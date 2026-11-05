@@ -103,12 +103,20 @@ export function StarPointer({ stars, positions, mask }: StarPointerProps) {
       gesture = null;
       window.clearTimeout(longPressTimer);
       if (cancelled) return;
-      const { tool, addWaypoint, pickRulerStar, select, toggleSelect, clearSelection } =
-        useUi.getState();
+      const {
+        tool,
+        addWaypoint,
+        pickRulerStar,
+        pickAutoRouteSystem,
+        select,
+        toggleSelect,
+        clearSelection,
+      } = useUi.getState();
       const star = pick(event, touch);
       if (tool !== 'none') {
         if (star && tool === 'route') addWaypoint(star.systemId);
         if (star && tool === 'ruler') pickRulerStar(star.id);
+        if (star && tool === 'autoroute') pickAutoRouteSystem(star.systemId);
       } else if (!star) {
         if (!event.shiftKey) clearSelection();
       } else if (event.shiftKey) {

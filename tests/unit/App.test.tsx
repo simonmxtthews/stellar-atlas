@@ -2,7 +2,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from '../../src/App';
 import { useCatalogue } from '../../src/store/catalogue';
-import { sol, starOf, systemOf } from './map/fixtures';
+import { noProbes, sol, starOf, systemOf } from './map/fixtures';
 
 // jsdom has no ResizeObserver, which the R3F canvas uses to measure itself.
 class ResizeObserverStub {
@@ -28,7 +28,9 @@ describe('App', () => {
           ? stars
           : url.endsWith('systems.json')
             ? systems
-            : [];
+            : url.endsWith('probes.json')
+              ? noProbes
+              : [];
         return Promise.resolve(Response.json(data));
       }),
     );

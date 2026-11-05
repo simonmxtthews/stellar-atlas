@@ -15,20 +15,28 @@ import {
   rowsToHosts,
 } from './lib/drafts';
 import {
+  ATNF_ENDPOINT,
+  ATNF_VERSION,
+  HORIZONS_ENDPOINT,
   HYG_SHA256,
   HYG_URL,
   HYG_VERSION,
   TAP_ENDPOINT,
+  loadAtnfEphemerides,
   loadExoplanets,
+  loadHorizonsVectors,
   loadHyg,
 } from './lib/fetch';
+import type { FetchedFile } from './lib/fetch';
 import { computeIdMap } from './lib/idmap';
+import { PLAQUE_PULSARS, PROBE_EPOCH, PROBES, buildProbeData } from './lib/probes';
 import type { OverrideFile } from './lib/schema';
 import {
   exoplanetRowSchema,
   hygRowSchema,
   metaSchema,
   overrideFileSchema,
+  probeDataSchema,
   starSchema,
   systemSchema,
   validateCatalogue,
@@ -43,8 +51,10 @@ const ATTRIBUTION =
   'Star data from the HYG Database by David Nash (astronexus.com/hyg), licensed CC BY-SA 4.0. ' +
   'This research has made use of the NASA Exoplanet Archive, which is operated by the California ' +
   'Institute of Technology, under contract with NASA under the Exoplanet Exploration Program. ' +
-  'Hand-curated nearby objects use values from SIMBAD (CDS, Strasbourg). The derived catalogue ' +
-  'is distributed under CC BY-SA 4.0.';
+  'Hand-curated nearby objects use values from SIMBAD (CDS, Strasbourg). Probe state vectors ' +
+  'come from JPL Horizons (NASA/JPL Solar System Dynamics). Pulsar positions come from the ATNF ' +
+  'Pulsar Catalogue (Manchester et al. 2005, AJ 129, 1993). The derived catalogue is ' +
+  'distributed under CC BY-SA 4.0.';
 
 function loadOverrides(): OverrideFile {
   const merged: OverrideFile = { additions: [], corrections: [], knownMissingHosts: [] };
@@ -140,6 +150,22 @@ async function main(): Promise<void> {
   const hyg = await loadHyg(RAW_DIR, offline);
   const exoplanets = await loadExoplanets(RAW_DIR, offline);
   const overrides = loadOverrides();
+  const horizons: FetchedFile[] = [];
+  for (const { horizonsId } of PROBES) {
+    // One at a time, as Horizons serves a batch of parallel requests poorly.
+    horizons.push(await loadHorizonsVectors(RAW_DIR, horizonsId, PROBE_EPOCH, offline));
+  }
+  const atnf = await loadAtnfEphemerides(
+    RAW_DIR,
+    PLAQUE_PULSARS.map((pulsar) => pulsar.jName),
+    offline,
+  );
+  const probeData = probeDataSchema.parse(
+    buildProbeData(
+      horizons.map((file) => file.text),
+      atnf.text,
+    ),
+  );
 
   const hygRows = z
     .array(hygRowSchema)
@@ -196,6 +222,20 @@ async function main(): Promise<void> {
         licence: 'Public; acknowledgement requested',
         fetchedAt: exoplanets.fetchedAt,
       },
+      {
+        name: 'JPL Horizons',
+        version: PROBE_EPOCH,
+        url: HORIZONS_ENDPOINT,
+        licence: 'Public; NASA/JPL',
+        fetchedAt: horizons[0]?.fetchedAt ?? atnf.fetchedAt,
+      },
+      {
+        name: 'ATNF Pulsar Catalogue',
+        version: ATNF_VERSION,
+        url: ATNF_ENDPOINT,
+        licence: 'Public; acknowledgement requested',
+        fetchedAt: atnf.fetchedAt,
+      },
     ],
     counts: {
       stars: result.stars.length,
@@ -222,6 +262,7 @@ async function main(): Promise<void> {
   writeFileSync(join(OUT_DIR, 'stars.json'), toJsonLines(catalogue.stars));
   writeFileSync(join(OUT_DIR, 'systems.json'), toJsonLines(catalogue.systems));
   writeFileSync(join(OUT_DIR, 'planets.json'), toJsonLines(catalogue.planets));
+  writeFileSync(join(OUT_DIR, 'probes.json'), `${JSON.stringify(probeData, null, 2)}\n`);
   writeFileSync(join(OUT_DIR, 'meta.json'), `${JSON.stringify(catalogue.meta, null, 2)}\n`);
 
   logReport(result, catalogue.stars, catalogue.systems, catalogue.planets, idMap);

@@ -56,6 +56,30 @@ describe('ruler', () => {
   });
 });
 
+describe('auto-route', () => {
+  it('picks a start and an end, and a third pick starts over', () => {
+    ui().startAutoRoute();
+    ui().pickAutoRouteSystem('a');
+    ui().pickAutoRouteSystem('a');
+    expect(ui().autoRouteIds).toEqual(['a']);
+    ui().pickAutoRouteSystem('b');
+    expect(ui().autoRouteIds).toEqual(['a', 'b']);
+    ui().pickAutoRouteSystem('c');
+    expect(ui().autoRouteIds).toEqual(['c']);
+  });
+
+  it('forgets its picks when it ends or another tool starts', () => {
+    ui().startAutoRoute();
+    ui().pickAutoRouteSystem('a');
+    ui().startRuler();
+    expect(ui().autoRouteIds).toEqual([]);
+    ui().startAutoRoute();
+    ui().pickAutoRouteSystem('a');
+    ui().endTool();
+    expect(ui().autoRouteIds).toEqual([]);
+  });
+});
+
 describe('route display', () => {
   it('toggles a route’s visibility', () => {
     ui().toggleRouteHidden('r');

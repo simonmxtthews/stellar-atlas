@@ -10,6 +10,9 @@ export interface Overlays {
   readonly grid: boolean;
   readonly rings: boolean;
   readonly dropLines: boolean;
+  readonly jumpNetwork: boolean;
+  readonly probes: boolean;
+  readonly pulsars: boolean;
 }
 
 // The system open in the detail modal; starId null shows its primary.
@@ -25,8 +28,10 @@ export interface StarHover {
   readonly y: number;
 }
 
-export type Tool = 'none' | 'route' | 'ruler';
-export type Panel = 'routes' | 'world';
+export type Tool = 'none' | 'route' | 'ruler' | 'autoroute';
+export type Panel = 'routes' | 'world' | 'drive' | 'network' | 'probes';
+
+export const DEFAULT_RANGE_SPHERE_LY = 10;
 
 interface UiState {
   readonly filters: StarFilters;
@@ -40,6 +45,10 @@ interface UiState {
   readonly tool: Tool;
   readonly routeDraft: readonly string[]; // system IDs, in order
   readonly rulerStarIds: readonly string[]; // up to two
+  readonly autoRouteIds: readonly string[]; // system IDs: start, then end
+  readonly referenceStarId: string; // all distances are measured from it
+  readonly rangeSphereLy: number | null; // null when off
+  readonly probeYearsAhead: number;
   readonly panel: Panel | null;
   readonly expandedRouteId: string | null;
   readonly hiddenRouteIds: readonly string[]; // this session's view, not part of the world
@@ -61,6 +70,11 @@ interface UiState {
   readonly removeLastWaypoint: () => void;
   readonly startRuler: () => void;
   readonly pickRulerStar: (starId: string) => void;
+  readonly startAutoRoute: () => void;
+  readonly pickAutoRouteSystem: (systemId: string) => void;
+  readonly setReference: (starId: string) => void;
+  readonly setRangeSphere: (radiusLy: number | null) => void;
+  readonly setProbeYearsAhead: (years: number) => void;
   readonly endTool: () => void;
   readonly togglePanel: (panel: Panel) => void;
   readonly showRoute: (routeId: string | null) => void;
@@ -69,7 +83,14 @@ interface UiState {
 
 export const useUi = create<UiState>()((set) => ({
   filters: DEFAULT_FILTERS,
-  overlays: { grid: true, rings: true, dropLines: true },
+  overlays: {
+    grid: true,
+    rings: true,
+    dropLines: true,
+    jumpNetwork: false,
+    probes: false,
+    pulsars: false,
+  },
   orbitStarId: SOL_ID,
   flyRequest: null,
   selectedSystemIds: [],
@@ -79,6 +100,10 @@ export const useUi = create<UiState>()((set) => ({
   tool: 'none',
   routeDraft: [],
   rulerStarIds: [],
+  autoRouteIds: [],
+  referenceStarId: SOL_ID,
+  rangeSphereLy: null,
+  probeYearsAhead: 0,
   panel: null,
   expandedRouteId: null,
   hiddenRouteIds: [],
@@ -131,6 +156,7 @@ export const useUi = create<UiState>()((set) => ({
       tool: 'route',
       routeDraft: systemId === undefined ? [] : [systemId],
       rulerStarIds: [],
+      autoRouteIds: [],
       detail: null,
     }),
   // A second click on the same system, as in a double-click, isn't a leg.
@@ -139,7 +165,8 @@ export const useUi = create<UiState>()((set) => ({
       state.routeDraft.at(-1) === systemId ? {} : { routeDraft: [...state.routeDraft, systemId] },
     ),
   removeLastWaypoint: () => set((state) => ({ routeDraft: state.routeDraft.slice(0, -1) })),
-  startRuler: () => set({ tool: 'ruler', routeDraft: [], rulerStarIds: [], detail: null }),
+  startRuler: () =>
+    set({ tool: 'ruler', routeDraft: [], rulerStarIds: [], autoRouteIds: [], detail: null }),
   // A third star starts a new measurement.
   pickRulerStar: (starId) =>
     set(({ rulerStarIds }) => {
@@ -147,7 +174,19 @@ export const useUi = create<UiState>()((set) => ({
       if (first === undefined || second !== undefined) return { rulerStarIds: [starId] };
       return first === starId ? {} : { rulerStarIds: [first, starId] };
     }),
-  endTool: () => set({ tool: 'none', routeDraft: [], rulerStarIds: [] }),
+  startAutoRoute: () =>
+    set({ tool: 'autoroute', routeDraft: [], rulerStarIds: [], autoRouteIds: [], detail: null }),
+  // As with the ruler, a third pick starts over.
+  pickAutoRouteSystem: (systemId) =>
+    set(({ autoRouteIds }) => {
+      const [start, end] = autoRouteIds;
+      if (start === undefined || end !== undefined) return { autoRouteIds: [systemId] };
+      return start === systemId ? {} : { autoRouteIds: [start, systemId] };
+    }),
+  setReference: (referenceStarId) => set({ referenceStarId }),
+  setRangeSphere: (rangeSphereLy) => set({ rangeSphereLy }),
+  setProbeYearsAhead: (probeYearsAhead) => set({ probeYearsAhead }),
+  endTool: () => set({ tool: 'none', routeDraft: [], rulerStarIds: [], autoRouteIds: [] }),
   togglePanel: (panel) => set((state) => ({ panel: state.panel === panel ? null : panel })),
   showRoute: (expandedRouteId) =>
     set(expandedRouteId === null ? { expandedRouteId } : { expandedRouteId, panel: 'routes' }),

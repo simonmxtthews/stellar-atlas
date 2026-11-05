@@ -1,4 +1,6 @@
-import type { Star, StarSystem } from '../../../src/types/catalogue';
+import type { ProbeData, Star, StarSystem } from '../../../src/types/catalogue';
+
+export const noProbes: ProbeData = { epochYear: 2025, probes: [], pulsars: [] };
 
 export function starOf(overrides: Partial<Star> & { readonly id: string }): Star {
   return {

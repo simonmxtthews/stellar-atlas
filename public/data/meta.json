@@ -1,5 +1,5 @@
 {
-  "buildDate": "2026-11-04T23:08:44.559Z",
+  "buildDate": "2026-11-05T05:11:06.338Z",
   "radiusLy": 100,
   "sources": [
     {
@@ -16,6 +16,20 @@
       "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync",
       "licence": "Public; acknowledgement requested",
       "fetchedAt": "2026-11-04T23:08:42.283Z"
+    },
+    {
+      "name": "JPL Horizons",
+      "version": "2025-01-01",
+      "url": "https://ssd.jpl.nasa.gov/api/horizons.api",
+      "licence": "Public; NASA/JPL",
+      "fetchedAt": "2026-11-05T05:10:58.686Z"
+    },
+    {
+      "name": "ATNF Pulsar Catalogue",
+      "version": "2.6.1",
+      "url": "https://www.atnf.csiro.au/research/pulsar/psrcat/proc_form.php",
+      "licence": "Public; acknowledgement requested",
+      "fetchedAt": "2026-11-05T05:11:03.768Z"
     }
   ],
   "counts": {
@@ -257,6 +271,6 @@
       "distLy": 99.55
     }
   ],
-  "attribution": "Star data from the HYG Database by David Nash (astronexus.com/hyg), licensed CC BY-SA 4.0. This research has made use of the NASA Exoplanet Archive, which is operated by the California Institute of Technology, under contract with NASA under the Exoplanet Exploration Program. Hand-curated nearby objects use values from SIMBAD (CDS, Strasbourg). The derived catalogue is distributed under CC BY-SA 4.0.",
+  "attribution": "Star data from the HYG Database by David Nash (astronexus.com/hyg), licensed CC BY-SA 4.0. This research has made use of the NASA Exoplanet Archive, which is operated by the California Institute of Technology, under contract with NASA under the Exoplanet Exploration Program. Hand-curated nearby objects use values from SIMBAD (CDS, Strasbourg). Probe state vectors come from JPL Horizons (NASA/JPL Solar System Dynamics). Pulsar positions come from the ATNF Pulsar Catalogue (Manchester et al. 2005, AJ 129, 1993). The derived catalogue is distributed under CC BY-SA 4.0.",
   "idMap": {}
 }

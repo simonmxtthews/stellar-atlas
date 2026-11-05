@@ -3,6 +3,7 @@ import {
   computeVisibleMask,
   countVisible,
   DEFAULT_FILTERS,
+  distanceFromReference,
   revealFilters,
 } from '../../../src/lib/filters';
 import { sol, starOf, systemOf } from './fixtures';
@@ -113,5 +114,35 @@ describe('revealFilters', () => {
   it('never changes filters for Sol, which always shows', () => {
     const filters = { ...DEFAULT_FILTERS, hiddenClasses: ['G'] as const, hasPlanets: true };
     expect(revealFilters(sol, systemOf(sol), filters)).toBe(filters);
+  });
+});
+
+describe('reference star', () => {
+  const near = starOf({ id: 'near', pos: [30, 0, 0], distLy: 30 });
+  const far = starOf({ id: 'far', pos: [70, 0, 0], distLy: 70 });
+  const stars = [sol, near, far];
+  const byId = new Map(stars.map((star) => [star.systemId, systemOf(star)]));
+  const filters = { ...DEFAULT_FILTERS, radiusLy: 30 };
+
+  it('measures from Sol by default, by the catalogue distance', () => {
+    expect(distanceFromReference(near, undefined)).toBe(30);
+    expect(distanceFromReference(near, sol)).toBe(30);
+  });
+
+  it('measures from the reference otherwise', () => {
+    expect(distanceFromReference(far, near)).toBeCloseTo(40);
+  });
+
+  it('centres the radius on the reference, keeping Sol as the landmark', () => {
+    expect([...computeVisibleMask(stars, byId, filters)]).toEqual([1, 1, 0]);
+    expect([...computeVisibleMask(stars, byId, filters, new Set(), far)]).toEqual([1, 0, 1]);
+    expect([
+      ...computeVisibleMask(stars, byId, { ...filters, radiusLy: 5 }, new Set(), far),
+    ]).toEqual([1, 0, 1]);
+  });
+
+  it('widens to reveal a star by its distance from the reference', () => {
+    const revealed = revealFilters(far, systemOf(far), { ...filters, radiusLy: 5 }, false, near);
+    expect(revealed.radiusLy).toBe(40);
   });
 });

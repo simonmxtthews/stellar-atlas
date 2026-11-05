@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { revealFilters } from '../lib/filters';
+import { distanceFromReference, revealFilters } from '../lib/filters';
 import { isTypingTarget } from '../lib/keys';
 import { createStarSearch, searchStars, withWorldNames, type StarSearch } from '../lib/search';
 import { formatValue, spectralCode } from '../lib/starFacts';
@@ -31,6 +31,8 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
   const [focused, setFocused] = useState(false);
   const starMeta = useWorld((state) => state.world.starMeta);
   const tags = useWorld((state) => state.world.tags);
+  const referenceStarId = useUi((state) => state.referenceStarId);
+  const reference = catalogue.starsById.get(referenceStarId);
 
   useEffect(() => whenIdle(() => setSearch(createStarSearch(catalogue))), [catalogue]);
 
@@ -65,7 +67,7 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
     const { filters, setFilters, select, flyToStar } = useUi.getState();
     const system = catalogue.systemsById.get(star.systemId);
     const tagged = (starMeta[star.id]?.tagIds.length ?? 0) > 0;
-    if (system) setFilters(revealFilters(star, system, filters, tagged));
+    if (system) setFilters(revealFilters(star, system, filters, tagged, reference));
     select(star.systemId, star.id);
     flyToStar(star.id);
     finish();
@@ -136,7 +138,8 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
               {withCustomName(star.displayName, customNameOf(starMeta, star.id))}
             </span>
             <span className="whitespace-nowrap text-slate-400 tabular-nums">
-              {spectralCode(star.spectral)} · {formatValue(star.distLy, 2, 'ly')}
+              {spectralCode(star.spectral)} ·{' '}
+              {formatValue(distanceFromReference(star, reference), 2, 'ly')}
             </span>
           </li>
         ))}
