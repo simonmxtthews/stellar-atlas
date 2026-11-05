@@ -85,7 +85,7 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
   return (
     <aside
       aria-label="Map controls"
-      className="absolute top-3 left-3 w-60 rounded-lg border border-slate-700/60 bg-slate-950/85 p-3 text-sm text-slate-200 backdrop-blur max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:w-auto max-md:rounded-b-none"
+      className="absolute top-16 left-3 w-60 rounded-lg border border-slate-700/60 bg-slate-950/85 p-3 text-sm text-slate-200 backdrop-blur max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:w-auto max-md:rounded-b-none"
     >
       <div className="flex items-center justify-between gap-2">
         <h1 className="font-medium">Stellar Atlas</h1>
@@ -123,7 +123,7 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
       )}
 
       {open && (
-        <div className="max-h-[calc(100dvh-11rem)] overflow-y-auto max-md:max-h-[45dvh]">
+        <div className="max-h-[calc(100dvh-14rem)] overflow-y-auto max-md:max-h-[45dvh]">
           <label className="mt-3 block">
             <span className="flex justify-between text-xs tracking-wide text-slate-400 uppercase">
               Radius <span className="tracking-normal normal-case">{filters.radiusLy} ly</span>
@@ -179,7 +179,7 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
           <p className="mt-3 text-xs text-slate-500">
             Drag to orbit, right-drag to pan, scroll to zoom. Click a star to select it, shift-click
             to add more; <kbd>Esc</kbd> closes then clears. Double-click flies to a star;{' '}
-            <kbd>H</kbd> returns to Sol.
+            <kbd>H</kbd> returns to Sol; <kbd>/</kbd> searches.
           </p>
         </div>
       )}

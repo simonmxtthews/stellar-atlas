@@ -39,6 +39,17 @@ export function computeVisibleMask(
   return mask;
 }
 
+// The least relaxed filters that show this star, so a search hit is never left invisible.
+export function revealFilters(star: Star, system: StarSystem, filters: StarFilters): StarFilters {
+  if (star.id === SOL_ID) return filters;
+  return {
+    radiusLy: Math.max(filters.radiusLy, Math.ceil(star.distLy)),
+    hiddenClasses: filters.hiddenClasses.filter((cls) => cls !== star.spectral.cls),
+    hasPlanets: filters.hasPlanets && system.planetCount > 0,
+    multipleOnly: filters.multipleOnly && system.starIds.length > 1,
+  };
+}
+
 export function countVisible(
   stars: readonly Star[],
   mask: Uint8Array,

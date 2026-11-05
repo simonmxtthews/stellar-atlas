@@ -378,6 +378,102 @@ test('labels stay within the cap and fall with the radius', async ({ page }) => 
   await expect.poll(count).toBeGreaterThan(0);
 });
 
+test('search: "tau ceti" flies to the star and its modal lists the planets', async ({ page }) => {
+  await openMap(page);
+  const tauCeti = stars.find((star) => star.displayName === 'Tau Ceti');
+  if (!tauCeti) throw new Error('No Tau Ceti');
+  const home = await canvasShot(page);
+  const search = page.getByRole('combobox', { name: 'Search stars' });
+
+  await page.keyboard.press('/');
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue('');
+  // H and Esc are typing here, not map shortcuts.
+  await page.keyboard.type('h');
+  await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Sol');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('tau ceti');
+  await expect(page.getByRole('option').first()).toContainText('Tau Ceti');
+  await expect(page.getByRole('option').first()).toContainText(`${tauCeti.distLy.toFixed(2)} ly`);
+  await page.keyboard.press('Enter');
+
+  const dialog = page.getByRole('dialog', { name: 'Tau Ceti' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('region', { name: 'Planets' }).getByRole('row')).toHaveCount(
+    tauCeti.planetIds.length + 1,
+  );
+  await expect(page.getByTestId('selection-count')).toHaveText('1 system selected');
+  await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Tau Ceti');
+  await page.waitForTimeout(SETTLE_MS * 2);
+  await expectChanged(page, await canvasShot(page), home);
+
+  // The keyboard is back with the map.
+  await expect(search).not.toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+});
+
+test('search: aliases agree, and arrows pick a result', async ({ page }) => {
+  await openMap(page);
+  const search = page.getByRole('combobox', { name: 'Search stars' });
+  const first = page.getByRole('option').first();
+  for (const query of ['α Cen', 'alpha cen', 'alp cen']) {
+    await search.fill(query);
+    await expect(first).toContainText('Rigil Kentaurus');
+  }
+  for (const query of ['GJ 699', 'Gliese 699', 'gl699']) {
+    await search.fill(query);
+    await expect(first).toContainText("Barnard's Star");
+  }
+
+  await search.fill('alpha cen');
+  const secondName = await page.getByRole('option').nth(1).locator('span').first().textContent();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.getByRole('option').nth(1)).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('dialog').getByRole('heading', { level: 2 })).toHaveText(
+    secondName ?? '',
+  );
+});
+
+test('search: Esc leaves an open modal, and clicking the map closes the results', async ({
+  page,
+}) => {
+  await openMap(page);
+  const { star, x, y } = isolatedStar(page);
+  await page.mouse.click(x, y);
+  const dialog = page.getByRole('dialog', { name: star.displayName });
+  await expect(dialog).toBeVisible();
+
+  await page.keyboard.press('/');
+  await page.keyboard.type('sirius');
+  await expect(page.getByRole('option').first()).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('option')).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+
+  await page.keyboard.press('/');
+  await page.keyboard.type('sirius');
+  await expect(page.getByRole('option').first()).toBeVisible();
+  await page.mouse.click(x + 25, y - 25);
+  await expect(page.getByRole('option')).toHaveCount(0);
+});
+
+test('search: a hit outside the filters widens them so the star shows', async ({ page }) => {
+  await openMap(page);
+  const far = stars.find((star) => star.distLy > 60 && star.names.hd && star.spectral.cls === 'K');
+  if (!far?.names.hd) throw new Error('No distant K star');
+  await page.getByLabel('K', { exact: true }).uncheck();
+
+  await page.keyboard.press('/');
+  await page.keyboard.type(far.names.hd);
+  await page.keyboard.press('Enter');
+
+  await expect(page.getByRole('dialog', { name: far.displayName })).toBeVisible();
+  await expect(page.getByLabel('K', { exact: true })).toBeChecked();
+  await expect(page.getByLabel('Radius')).toHaveValue(String(Math.ceil(far.distLy)));
+});
+
 test.describe('touch', () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
