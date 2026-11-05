@@ -328,9 +328,9 @@ Each milestone is done when every box below is ticked, tests pass and lint is cl
 
 **M2 — 3D map**
 
-- [ ] All stars within the radius render as coloured points at 60 fps
-- [ ] Galactic grid, range rings and drop lines toggle
-- [ ] Orbit/pan/zoom, double-click fly-to, `H` returns to Sol; radius slider and class filters work
+- [x] All stars within the radius render as coloured points at 60 fps
+- [x] Galactic grid, range rings and drop lines toggle
+- [x] Orbit/pan/zoom, double-click fly-to, `H` returns to Sol; radius slider and class filters work
 
 **M3 — Selection and modal (MVP)**
 
