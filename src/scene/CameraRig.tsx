@@ -9,6 +9,7 @@ import {
   MAX_CAMERA_DISTANCE,
   MIN_CAMERA_DISTANCE,
 } from '../lib/camera';
+import { isTypingTarget } from '../lib/keys';
 import { useUi } from '../store/ui';
 import type { Position, Star } from '../types/catalogue';
 import { pickStarAt } from './pickStarAt';
@@ -63,7 +64,7 @@ export function CameraRig({ stars, positions, mask, onCameraRest }: CameraRigPro
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'h') return;
+      if (event.key.toLowerCase() !== 'h' || isTypingTarget(event.target)) return;
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       flyHome();
     };

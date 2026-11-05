@@ -474,6 +474,272 @@ test('search: a hit outside the filters widens them so the star shows', async ({
   await expect(page.getByLabel('Radius')).toHaveValue(String(Math.ceil(far.distLy)));
 });
 
+// Clear of the toolbar, whose hover state shows in screenshots, and of any star's tooltip.
+async function restPointer(page: Page): Promise<void> {
+  await page.mouse.move(1270, 715);
+}
+
+function threeStops(page: Page): readonly [StarOnScreen, StarOnScreen, StarOnScreen] {
+  const [first, second, third] = isolatedStars(page);
+  if (!first || !second || !third) throw new Error('Not enough isolated stars');
+  return [first, second, third];
+}
+
+function lightYears(a: Star, b: Star): number {
+  const [x, y, z] = a.pos;
+  return Math.hypot(x - b.pos[0], y - b.pos[1], z - b.pos[2]);
+}
+
+async function buildRoute(page: Page): Promise<readonly StarOnScreen[]> {
+  const stops = threeStops(page);
+  await page.keyboard.press('r');
+  for (const { x, y } of stops) await page.mouse.click(x, y);
+  await expect(page.getByTestId('route-draft')).toContainText(' → ');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('complementary', { name: 'Route panel' })).toBeVisible();
+  return stops;
+}
+
+test('route mode: clicks add waypoints, Backspace and Esc work, and clicks do not select', async ({
+  page,
+}) => {
+  await openMap(page);
+  const [first, second] = threeStops(page);
+  const draft = page.getByTestId('route-draft');
+
+  await page.keyboard.press('r');
+  await page.mouse.click(first.x, first.y);
+  await page.mouse.click(second.x, second.y);
+  await expect(draft).toContainText(' → ');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByTestId('selection-count')).toHaveCount(0);
+
+  await page.keyboard.press('Backspace');
+  await expect(draft).not.toContainText(' → ');
+
+  await page.keyboard.press('Escape');
+  await expect(draft).toHaveCount(0);
+  await page.keyboard.press('r');
+  await expect(draft).toContainText('Click systems');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Routes' }).click();
+  await expect(page.getByText('No routes yet')).toBeVisible();
+});
+
+test('a 3-stop route draws, shows its distances, and persists through a reload', async ({
+  page,
+}) => {
+  await openMap(page);
+  const before = await canvasShot(page);
+  const [first, second, third] = await buildRoute(page);
+  if (!first || !second || !third) throw new Error('Not enough stops');
+  await page.getByRole('button', { name: 'Routes' }).click(); // close, to compare just the map
+  await restPointer(page);
+  await expectChanged(page, await canvasShot(page), before);
+  await page.getByRole('button', { name: 'Routes' }).click();
+
+  const legA = lightYears(first.star, second.star);
+  const legB = lightYears(second.star, third.star);
+  // System positions are the primaries', which these isolated stars are close to.
+  const total = page.getByTestId('route-total');
+  await expect(total).toHaveText(/ ly$/);
+  expect(Number.parseFloat((await total.textContent()) ?? '')).toBeCloseTo(legA + legB, 0);
+  await expect(page.getByTestId('leg-distance')).toHaveCount(2);
+
+  await page.getByLabel('Name', { exact: true }).fill('The Long Haul');
+  await page.getByLabel('Kind').selectOption('military');
+  await page.getByLabel('Dashed').check();
+
+  // Without waiting out the autosave debounce: leaving the page flushes it.
+  await page.reload();
+  await expect(page.getByTestId('visible-count')).toBeVisible();
+  await page.getByRole('button', { name: 'Routes' }).click();
+  await page.getByRole('button', { name: /The Long Haul/ }).click();
+  await expect(page.getByLabel('Kind')).toHaveValue('military');
+  await expect(page.getByLabel('Dashed')).toBeChecked();
+  await expect(page.getByTestId('leg-distance')).toHaveCount(2);
+});
+
+test('a hidden route leaves the map, and a deleted one can be undone', async ({ page }) => {
+  await openMap(page);
+  // Below the toolbar, whose Undo button lights up once there is an edit.
+  const map = { clip: { x: 0, y: 40, width: 1280, height: 680 } };
+  await restPointer(page);
+  const before = await page.screenshot(map);
+  await buildRoute(page);
+  const panelButton = page.getByRole('button', { name: 'Routes' });
+  await panelButton.click();
+  await restPointer(page);
+  await page.waitForTimeout(300);
+  await expectChanged(page, await page.screenshot(map), before);
+  await panelButton.click();
+  await page.getByRole('checkbox', { name: /^Show / }).uncheck();
+  await panelButton.click();
+  await restPointer(page);
+  await page.waitForTimeout(300);
+  await expectSame(page, await page.screenshot(map), before);
+  await panelButton.click();
+  await page.getByRole('checkbox', { name: /^Show / }).check();
+
+  await page.getByRole('button', { name: 'Delete route' }).click();
+  await expect(page.getByText('No routes yet')).toBeVisible();
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(page.getByTestId('route-total')).toBeVisible();
+  await page.keyboard.press('ControlOrMeta+Shift+z');
+  await expect(page.getByText('No routes yet')).toBeVisible();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(page.getByTestId('route-total')).toBeVisible();
+});
+
+test('the ruler measures two stars and saves nothing', async ({ page }) => {
+  await openMap(page);
+  const [first, second] = threeStops(page);
+  const before = await canvasShot(page);
+  const readout = page.getByTestId('ruler-readout');
+
+  await page.keyboard.press('m');
+  await page.mouse.click(first.x, first.y);
+  await expect(readout).toContainText('pick a second star');
+  await page.mouse.click(second.x, second.y);
+  await expect(readout).toHaveText(
+    `${first.star.displayName} → ${second.star.displayName}: ${lightYears(first.star, second.star).toFixed(2)} ly`,
+  );
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await restPointer(page);
+  await expectChanged(page, await canvasShot(page), before);
+
+  await page.keyboard.press('Escape');
+  await expect(readout).toHaveCount(0);
+  await page.waitForTimeout(SETTLE_MS);
+  await expectSame(page, await canvasShot(page), before);
+  await page.getByRole('button', { name: 'Routes' }).click();
+  await expect(page.getByText('No routes yet')).toBeVisible();
+});
+
+test('custom names, notes and tags: halos, typing stays typing, search and reload find them', async ({
+  page,
+}) => {
+  await openMap(page);
+  const { star, x, y } = isolatedStar(page);
+  const around = { clip: { x: x - 30, y: y - 30, width: 60, height: 60 } };
+  const before = await page.screenshot(around);
+
+  await page.mouse.click(x, y);
+  const dialog = page.getByRole('dialog', { name: star.displayName });
+  const orbit = page.getByTestId('orbit-target');
+
+  // H, R, M and / are letters here, not shortcuts; backspacing doesn't touch a route.
+  await dialog.getByLabel('Custom name').fill('');
+  await dialog.getByLabel('Custom name').pressSequentially('Harm/ony');
+  await expect(orbit).toHaveText('Orbit target: Sol');
+  await expect(dialog.getByTestId('custom-name')).toHaveText('Harm/ony');
+  await dialog.getByLabel('Notes').fill('Capital of the rim worlds');
+
+  await dialog.getByLabel('New tag').fill('Colonised');
+  await dialog.getByRole('button', { name: 'Add' }).click();
+  await dialog.getByLabel('New tag').fill('Hegemony');
+  await dialog.getByRole('button', { name: 'Add' }).click();
+  await expect(dialog.getByRole('button', { name: 'Hegemony', pressed: true })).toBeVisible();
+
+  // In a text field Esc stays with the field; from anywhere else it closes, then clears.
+  await dialog.getByLabel('New tag').focus();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('New tag').blur();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await restPointer(page);
+  await expectChanged(page, await page.screenshot(around), before);
+
+  await page.getByLabel('Tagged only').check();
+  await expect(page.getByTestId('visible-count')).toContainText(/^2 stars/);
+  await page.getByLabel('Tagged only').uncheck();
+
+  await page.waitForTimeout(SETTLE_MS);
+  await page.reload();
+  await expect(page.getByTestId('visible-count')).toBeVisible();
+  const search = page.getByRole('combobox', { name: 'Search stars' });
+  await search.fill('harm');
+  await expect(page.getByRole('option').first()).toContainText(`Harm/ony (${star.displayName})`);
+  await search.fill('hegemony');
+  await expect(page.getByRole('option').first()).toContainText('Harm/ony');
+  await page.keyboard.press('Enter');
+  const reopened = page.getByRole('dialog', { name: star.displayName });
+  await expect(reopened.getByLabel('Notes')).toHaveValue('Capital of the rim worlds');
+});
+
+test('export then import round-trips identically', async ({ page }, testInfo) => {
+  await openMap(page);
+  await buildRoute(page);
+  await page.getByRole('button', { name: 'Routes' }).click(); // it covers the stars
+  const { x, y } = threeStops(page)[1];
+  await page.mouse.click(x, y);
+  await page.getByRole('dialog').getByLabel('Custom name').fill('Haven');
+  await page.getByRole('dialog').getByLabel('New tag').fill('Core');
+  await page.getByRole('dialog').getByRole('button', { name: 'Add' }).click();
+  await page.getByRole('button', { name: 'Close' }).click();
+  await page.getByRole('button', { name: 'World', exact: true }).click();
+
+  const exportWorld = async (): Promise<{ readonly text: string; readonly name: string }> => {
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Export JSON' }).click(),
+    ]);
+    const path = testInfo.outputPath(`${Date.now()}.json`);
+    await download.saveAs(path);
+    return { text: readFileSync(path, 'utf8'), name: download.suggestedFilename() };
+  };
+
+  const original = await exportWorld();
+  expect(original.name).toMatch(/^world-my-world-\d{4}-\d{2}-\d{2}\.json$/);
+  const parsed = JSON.parse(original.text) as { routes: readonly unknown[]; tags: unknown[] };
+  expect(parsed.routes).toHaveLength(1);
+  expect(parsed.tags).toHaveLength(1);
+
+  // Into a fresh world, so that everything has to come from the file.
+  await page.getByRole('button', { name: 'New world' }).click();
+  await page.getByLabel('World file').setInputFiles({
+    name: 'world.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(original.text),
+  });
+  await page.getByRole('button', { name: 'Replace this world' }).click();
+  await expect(page.getByLabel('World name')).toHaveValue('My world');
+  expect((await exportWorld()).text).toBe(original.text);
+});
+
+test('import reports unknown IDs without failing, and rejects a broken file', async ({ page }) => {
+  await openMap(page);
+  await page.getByRole('button', { name: 'World', exact: true }).click();
+  const file = page.getByLabel('World file');
+
+  await file.setInputFiles({
+    name: 'bad.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{"schemaVersion": 99}'),
+  });
+  await expect(page.getByRole('alert')).toContainText('schema version 99');
+
+  const world = {
+    schemaVersion: 1,
+    name: 'Stale',
+    drive: { type: 'jump', maxJumpLy: 10, daysPerJump: 7 },
+    tags: [],
+    starMeta: { 'hyg:not-a-star': { tagIds: [], notes: 'orphan' } },
+    routes: [],
+    regions: [],
+  };
+  await file.setInputFiles({
+    name: 'stale.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(world)),
+  });
+  await expect(page.getByTestId('unknown-ids')).toContainText('hyg:not-a-star');
+  await page.getByRole('button', { name: 'Replace this world' }).click();
+  await expect(page.getByLabel('World name')).toHaveValue('Stale');
+});
+
 test.describe('touch', () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 

@@ -344,9 +344,9 @@ Each milestone is done when every box below is ticked, tests pass and lint is cl
 
 **M5 — Routes and world**
 
-- [ ] Route mode creates multi-leg routes with per-leg distance labels; route panel edits all fields
-- [ ] Ruler tool; tags with halos; custom names and notes
-- [ ] Autosave survives reload; JSON export/import round-trips; undo/redo works
+- [x] Route mode creates multi-leg routes with per-leg distance labels; route panel edits all fields
+- [x] Ruler tool; tags with halos; custom names and notes
+- [x] Autosave survives reload; JSON export/import round-trips; undo/redo works
 
 **M6 — World-building tools**
 

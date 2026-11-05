@@ -10,27 +10,16 @@ import {
   spectralCode,
   spectralReading,
 } from '../lib/starFacts';
+import { customNameOf } from '../lib/worldView';
 import type { Catalogue } from '../store/catalogue';
 import { useUi } from '../store/ui';
+import { useWorld } from '../store/world';
 import type { Planet, Star, StarSystem } from '../types/catalogue';
 import { HzStrip } from './HzStrip';
+import { ModalSection } from './ModalSection';
+import { StarWorldSection } from './StarWorldSection';
 
 const NEIGHBOUR_COUNT = 8;
-
-function ModalSection({
-  title,
-  children,
-}: {
-  readonly title: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <section aria-label={title} className="mt-4">
-      <h3 className="mb-1 text-xs tracking-wide text-slate-400 uppercase">{title}</h3>
-      {children}
-    </section>
-  );
-}
 
 function Fact({ label, value }: { readonly label: string; readonly value: ReactNode }) {
   return (
@@ -190,12 +179,14 @@ export function StarModal({ catalogue }: { readonly catalogue: Catalogue }) {
   const detail = useUi((state) => state.detail);
   const closeDetail = useUi((state) => state.closeDetail);
   const showStar = useUi((state) => state.showStar);
+  const starMeta = useWorld((state) => state.world.starMeta);
 
   const system = detail && catalogue.systemsById.get(detail.systemId);
   const members = system?.starIds.flatMap((id) => catalogue.starsById.get(id) ?? []) ?? [];
   const star = members.find((member) => member.id === detail?.starId) ?? members[0];
   if (!system || !star) return null;
   const names = designations(star);
+  const customName = customNameOf(starMeta, star.id);
 
   return (
     // Non-modal: the map stays interactive behind it and keeps the keyboard. Esc is handled with
@@ -213,6 +204,11 @@ export function StarModal({ catalogue }: { readonly catalogue: Catalogue }) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <Dialog.Title className="text-lg font-medium">{star.displayName}</Dialog.Title>
+              {customName && (
+                <p data-testid="custom-name" className="text-sm text-sky-200">
+                  {customName}
+                </p>
+              )}
               {system.name !== star.displayName && (
                 <p className="text-xs text-slate-400">{system.name} system</p>
               )}
@@ -250,6 +246,7 @@ export function StarModal({ catalogue }: { readonly catalogue: Catalogue }) {
           <StarFacts star={star} />
           <Planets star={star} catalogue={catalogue} />
           <Neighbours system={system} catalogue={catalogue} />
+          <StarWorldSection star={star} />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

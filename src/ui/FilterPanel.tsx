@@ -174,12 +174,18 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
               checked={filters.multipleOnly}
               onChange={() => setFilters({ multipleOnly: !filters.multipleOnly })}
             />
+            <Check
+              label="Tagged only"
+              checked={filters.taggedOnly}
+              onChange={() => setFilters({ taggedOnly: !filters.taggedOnly })}
+            />
           </Section>
 
           <p className="mt-3 text-xs text-slate-500">
             Drag to orbit, right-drag to pan, scroll to zoom. Click a star to select it, shift-click
             to add more; <kbd>Esc</kbd> closes then clears. Double-click flies to a star;{' '}
-            <kbd>H</kbd> returns to Sol; <kbd>/</kbd> searches.
+            <kbd>H</kbd> returns to Sol; <kbd>/</kbd> searches; <kbd>R</kbd> plots a route;{' '}
+            <kbd>M</kbd> measures.
           </p>
         </div>
       )}

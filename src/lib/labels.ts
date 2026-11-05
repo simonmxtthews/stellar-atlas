@@ -16,6 +16,7 @@ export interface LabelCandidate {
   readonly id: string;
   readonly text: string;
   readonly tier: LabelTier;
+  readonly color?: string; // a route's, for its leg labels
   readonly x: number; // scene coordinates
   readonly y: number;
   readonly z: number;
