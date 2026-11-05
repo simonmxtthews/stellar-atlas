@@ -90,8 +90,8 @@ function Approaches({
 export function ProbesPanel({ catalogue }: { readonly catalogue: Catalogue }) {
   const overlays = useUi((state) => state.overlays);
   const toggleOverlay = useUi((state) => state.toggleOverlay);
-  const yearsAhead = useUi((state) => state.probeYearsAhead);
-  const setYearsAhead = useUi((state) => state.setProbeYearsAhead);
+  const yearsAhead = useUi((state) => state.yearsAhead);
+  const setYearsAhead = useUi((state) => state.setYearsAhead);
   const [withinLy, setWithinLy] = useState(DEFAULT_APPROACH_LY);
   const { probes, epochYear } = catalogue.probeData;
   const thisYear = new Date().getFullYear();
@@ -123,7 +123,7 @@ export function ProbesPanel({ catalogue }: { readonly catalogue: Catalogue }) {
         </span>
         <input
           type="range"
-          aria-label="Probe year"
+          aria-label="Map year"
           min={0}
           max={MAX_YEARS_AHEAD}
           step={YEAR_STEP}
@@ -181,11 +181,7 @@ export function ProbesPanel({ catalogue }: { readonly catalogue: Catalogue }) {
       <p data-testid="approach-note" className="mt-1 text-xs text-slate-400">
         Over the next {MAX_YEARS_AHEAD.toLocaleString('en')} years, with each star moving in a
         straight line at its catalogue velocity. ≈ marks a star with no radial velocity or no motion
-        on record, so its figures are rough.
-      </p>
-      <p className="mt-1 text-xs text-amber-300">
-        The map still draws stars where they are today, so these encounters won't line up with a
-        probe's marker in far-future years.
+        on record, so its figures are rough. Year moves the map's stars to match.
       </p>
       {probes.map((probe, i) => (
         <Approaches

@@ -18,7 +18,7 @@ const CONE_LENGTH_FRACTION = 0.03;
 const UP = new Vector3(0, 1, 0);
 
 function ProbePaths({ probeData }: { readonly probeData: ProbeData }) {
-  const yearsAhead = useUi((state) => state.probeYearsAhead);
+  const yearsAhead = useUi((state) => state.yearsAhead);
   const material = useLabelMaterial();
   const { probes, epochYear } = probeData;
   const paths = useMemo(

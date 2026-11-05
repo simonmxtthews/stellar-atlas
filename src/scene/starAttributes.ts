@@ -1,4 +1,5 @@
-import { Color, type BufferAttribute } from 'three';
+import { useLayoutEffect, useState } from 'react';
+import { BufferAttribute, Color } from 'three';
 import { galacticToScene } from '../lib/coords';
 import { SOL_ID } from '../lib/filters';
 import type { Position, Star } from '../types/catalogue';
@@ -45,6 +46,19 @@ export function buildStarAttributes(stars: readonly Star[]): StarAttributes {
 
 export function starPosition(positions: Float32Array, index: number): Position {
   return [positions[index * 3] ?? 0, positions[index * 3 + 1] ?? 0, positions[index * 3 + 2] ?? 0];
+}
+
+function writePositions(attribute: BufferAttribute, positions: Float32Array): void {
+  attribute.array = positions;
+  attribute.needsUpdate = true;
+}
+
+// A position attribute that outlives its array. Moving the stars swaps in new positions at the same
+// size, so that no geometry is rebuilt and nothing else on it has to be written again.
+export function usePositionAttribute(positions: Float32Array): BufferAttribute {
+  const [attribute] = useState(() => new BufferAttribute(positions, 3));
+  useLayoutEffect(() => writePositions(attribute, positions), [attribute, positions]);
+  return attribute;
 }
 
 export function writeStarFlags(flags: BufferAttribute, mask: Uint8Array, sunIndex: number): void {

@@ -1,8 +1,9 @@
 import { Suspense, useMemo, useReducer } from 'react';
 import type { Catalogue } from '../store/catalogue';
 import { SOL_ID } from '../lib/filters';
+import { movedScenePositions } from '../lib/mapTime';
 import { useUi } from '../store/ui';
-import type { StarSystem } from '../types/catalogue';
+import type { Position, StarSystem } from '../types/catalogue';
 import { CameraRig } from './CameraRig';
 import { Grid } from './Grid';
 import { Beacons, Highlights, RegionHalos, TagHalos } from './Highlights';
@@ -15,8 +16,10 @@ import { buildStarAttributes } from './starAttributes';
 import { StarField } from './StarField';
 import { StarPointer } from './StarPointer';
 import type { SystemAnchor } from './systemAnchors';
+import { useMapShift, useMapYears } from './useMapShift';
 
 const REFERENCE_COLOR = '#fcd34d';
+const ORIGIN: Position = [0, 0, 0];
 
 export function Scene({
   catalogue,
@@ -29,14 +32,27 @@ export function Scene({
   readonly anchors: readonly SystemAnchor[];
   readonly visibleSystems: readonly StarSystem[];
 }) {
-  const { stars, starsById, starIndexById } = catalogue;
-  const attributes = useMemo(() => buildStarAttributes(stars), [stars]);
+  const { stars, starsById, starIndexById, systemsById } = catalogue;
+  const todaysAttributes = useMemo(() => buildStarAttributes(stars), [stars]);
+  const years = useMapYears();
+  const shift = useMapShift(systemsById);
+  const attributes = useMemo(
+    () => ({
+      ...todaysAttributes,
+      positions: movedScenePositions(todaysAttributes.positions, stars, systemsById, years),
+    }),
+    [stars, systemsById, todaysAttributes, years],
+  );
   const referenceStarId = useUi((state) => state.referenceStarId);
   const reference = starsById.get(referenceStarId);
+  const referencePos = useMemo(
+    () => (reference ? shift(reference.pos, reference.systemId) : ORIGIN),
+    [reference, shift],
+  );
   const referenceBeacons = useMemo(
     () =>
-      reference && reference.id !== SOL_ID ? [{ pos: reference.pos, color: REFERENCE_COLOR }] : [],
-    [reference],
+      reference && reference.id !== SOL_ID ? [{ pos: referencePos, color: REFERENCE_COLOR }] : [],
+    [reference, referencePos],
   );
   const [cameraEpoch, onCameraRest] = useReducer((epoch: number) => epoch + 1, 0);
   return (
@@ -50,8 +66,8 @@ export function Scene({
         onCameraRest={onCameraRest}
       />
       <StarPointer stars={stars} positions={attributes.positions} mask={mask} />
-      <Grid positions={attributes.positions} mask={mask} reference={reference} />
-      <JumpNetwork systems={visibleSystems} />
+      <Grid positions={attributes.positions} mask={mask} center={referencePos} />
+      <JumpNetwork systems={visibleSystems} systemsById={systemsById} />
       <StarField attributes={attributes} mask={mask} />
       <Routes catalogue={catalogue} visibleSystems={visibleSystems} />
       <RangeSpheres catalogue={catalogue} />

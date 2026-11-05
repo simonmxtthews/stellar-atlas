@@ -8,6 +8,7 @@ import { useUi } from '../store/ui';
 import { useWorld } from '../store/world';
 import type { Position, StarSystem } from '../types/catalogue';
 import type { Route } from '../types/world';
+import { useMapShift, type MapShift } from './useMapShift';
 
 export const DRAFT_COLOR = '#e2e8f0';
 export const RULER_COLOR = '#fde047';
@@ -52,17 +53,19 @@ export function Polyline({
 function SavedRoute({
   route,
   catalogue,
+  shift,
 }: {
   readonly route: Route;
   readonly catalogue: Catalogue;
+  readonly shift: MapShift;
 }) {
   const positions = useMemo(
     () =>
       route.waypoints.flatMap((id) => {
         const system = catalogue.systemsById.get(id);
-        return system ? [system.pos] : [];
+        return system ? [shift(system.pos, id)] : [];
       }),
-    [catalogue, route.waypoints],
+    [catalogue, route.waypoints, shift],
   );
   return (
     <Polyline positions={positions} color={route.color} width={route.width} dashed={route.dashed} />
@@ -82,33 +85,36 @@ export function Routes({
   const routeDraft = useUi((state) => state.routeDraft);
   const rulerStarIds = useUi((state) => state.rulerStarIds);
   const autoRoutePath = useAutoRoutePath(catalogue, visibleSystems);
+  const shift = useMapShift(catalogue.systemsById);
   const autoRoutePositions = useMemo(
     () =>
       (autoRoutePath ?? []).flatMap((id) => {
         const system = catalogue.systemsById.get(id);
-        return system ? [system.pos] : [];
+        return system ? [shift(system.pos, id)] : [];
       }),
-    [autoRoutePath, catalogue],
+    [autoRoutePath, catalogue, shift],
   );
   const draftPositions = useMemo(() => {
     const legs = routeLegs(routeDraft, catalogue.systemsById);
     const first = legs[0];
-    return first ? [first.from, ...legs.map((leg) => leg.to)] : [];
-  }, [catalogue, routeDraft]);
+    return first
+      ? [shift(first.from, first.fromId), ...legs.map((leg) => shift(leg.to, leg.toId))]
+      : [];
+  }, [catalogue, routeDraft, shift]);
   const rulerPositions = useMemo(
     () =>
       rulerStarIds.flatMap((id) => {
         const star = catalogue.starsById.get(id);
-        return star ? [star.pos] : [];
+        return star ? [shift(star.pos, star.systemId)] : [];
       }),
-    [catalogue, rulerStarIds],
+    [catalogue, rulerStarIds, shift],
   );
   return (
     <>
       {routes
         .filter((route) => !hiddenRouteIds.includes(route.id))
         .map((route) => (
-          <SavedRoute key={route.id} route={route} catalogue={catalogue} />
+          <SavedRoute key={route.id} route={route} catalogue={catalogue} shift={shift} />
         ))}
       <Polyline positions={draftPositions} color={DRAFT_COLOR} width={2} dashed />
       <Polyline positions={rulerPositions} color={RULER_COLOR} width={1.5} dashed={false} />

@@ -95,9 +95,22 @@ test('every star within 100 ly and 50 routes hold the frame rate', async ({ page
   await page.mouse.up();
   const orbitFps = await orbiting;
 
-  const report = `${gpu}: idle ${idleFps.toFixed(1)} fps, orbiting ${orbitFps.toFixed(1)} fps`;
+  // Dragging the year, which moves every star, label and route.
+  await page.getByRole('button', { name: 'Probes' }).click();
+  const yearSlider = page.getByLabel('Map year');
+  const dragging = sampleFps(page, SAMPLE_MS);
+  const started = Date.now();
+  for (let i = 1; Date.now() - started < SAMPLE_MS; i++) {
+    await yearSlider.fill(String((i * 500) % 100_000));
+  }
+  const yearFps = await dragging;
+
+  const report =
+    `${gpu}: idle ${idleFps.toFixed(1)} fps, orbiting ${orbitFps.toFixed(1)} fps, ` +
+    `dragging the year ${yearFps.toFixed(1)} fps`;
   console.log(report);
   testInfo.annotations.push({ type: 'performance', description: report });
   expect(idleFps).toBeGreaterThanOrEqual(TARGET_FPS);
   expect(orbitFps).toBeGreaterThanOrEqual(TARGET_FPS);
+  expect(yearFps).toBeGreaterThanOrEqual(TARGET_FPS);
 });

@@ -9,6 +9,8 @@ import {
   HOME_TARGET,
 } from '../../src/lib/camera';
 import { galacticToScene } from '../../src/lib/coords';
+import { movedPosition } from '../../src/lib/mapTime';
+import { STAR_EPOCH_YEAR } from '../../src/lib/probes';
 import type { CatalogueMeta, Star, StarSystem } from '../../src/types/catalogue';
 
 const stars = JSON.parse(
@@ -962,7 +964,7 @@ test('probe trajectories, the year slider, the approach table and the pulsar map
 
   const voyager = page.getByTestId('probe-row').filter({ hasText: 'Voyager 1' });
   await expect(voyager).toContainText('0.000 ly');
-  await panel.getByLabel('Probe year').fill('100000');
+  await panel.getByLabel('Map year').fill('100000');
   // 16.9 km/s for 100,000 years.
   await expect(voyager).toContainText('5.64');
   await expect(page.getByTestId('approach-note')).toContainText('catalogue velocity');
@@ -1106,6 +1108,103 @@ test('the About panel credits the data and gives its build date', async ({ page 
     'href',
     'https://exoplanetarchive.ipac.caltech.edu/',
   );
+});
+
+test('the year slider moves the map, while the figures and filters stay as of today', async ({
+  page,
+}) => {
+  await openMap(page);
+  const yearsAhead = 40_000;
+  const banner = page.getByTestId('map-year');
+  const count = await visibleStars(page);
+  const today = await canvasShot(page);
+  await expect(banner).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Probes' }).click();
+  await page.getByLabel('Map year').fill(String(yearsAhead));
+  await page.getByRole('button', { name: 'Probes' }).click();
+  const year = new Date().getFullYear() + yearsAhead;
+  await expect(banner).toHaveText(`Showing AD ${year.toLocaleString('en')}`);
+  await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Sol');
+  expect(await visibleStars(page)).toBe(count);
+  await restPointer(page);
+  await expectChanged(page, await canvasShot(page), today);
+
+  // A star is clicked where it has moved to, and its figures are still today's.
+  const { width, height } = viewportOf(page);
+  const camera = new PerspectiveCamera(CAMERA_FOV, width / height, CAMERA_NEAR, CAMERA_FAR);
+  camera.position.set(...HOME_POSITION);
+  camera.lookAt(...HOME_TARGET);
+  camera.updateMatrixWorld();
+  const everywhere = stars.map((star) => {
+    const system = systems.find((candidate) => candidate.id === star.systemId);
+    const years = year - STAR_EPOCH_YEAR;
+    const ndc = new Vector3(
+      ...galacticToScene(movedPosition(star.pos, system?.motion, years)),
+    ).project(camera);
+    return { star, x: ((ndc.x + 1) / 2) * width, y: ((1 - ndc.y) / 2) * height };
+  });
+  const visibleNow = everywhere.filter(({ star }) => star.distLy <= 50);
+  const pick = visibleNow.find(
+    (a) =>
+      a.star.id !== 'hyg:0' &&
+      systems.find((system) => system.id === a.star.systemId)?.motion?.radialKnown &&
+      a.x > (isPhone(page) ? 32 : PANEL_WIDTH_PX) &&
+      a.x < width - (isPhone(page) ? 16 : MODAL_WIDTH_PX) &&
+      a.y > MAP_TOP_PX + 100 &&
+      a.y < height - (isPhone(page) ? PHONE_SHEET_PX : 40) &&
+      visibleNow.every((b) => b === a || Math.hypot(a.x - b.x, a.y - b.y) > MIN_STAR_GAP_PX),
+  );
+  if (!pick) throw new Error('No isolated moved star on screen');
+  await page.mouse.click(pick.x, pick.y);
+  const dialog = page.getByRole('dialog', { name: pick.star.displayName });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('region', { name: 'Star facts' })).toContainText(
+    `${pick.star.distLy.toFixed(2)} ly`,
+  );
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Back to today' }).click();
+  await expect(banner).toHaveCount(0);
+  await restPointer(page);
+  await page.waitForTimeout(SETTLE_MS);
+  await expectSame(page, await canvasShot(page), today);
+});
+
+test('a route and a selection keep to their moving stars, and the camera to its orbit star', async ({
+  page,
+}) => {
+  await openMap(page);
+  await buildRoute(page);
+  const routes = page.getByRole('button', { name: 'Routes' });
+  const legs = page.getByTestId('leg-distance');
+  const todaysLegs = await legs.allTextContents();
+  await routes.click();
+  await page.keyboard.press('/');
+  await page.keyboard.type('vega');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Vega');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(SETTLE_MS * 2);
+
+  await page.getByRole('button', { name: 'Probes' }).click();
+  await page.getByLabel('Map year').fill('60000');
+  await page.getByRole('button', { name: 'Routes' }).click();
+  await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Vega');
+  await expect(page.getByTestId('map-year')).toBeVisible();
+  expect(await legs.allTextContents()).toEqual(todaysLegs);
+
+  // No flight restarts as the year changes, and orbiting doesn't lose the star.
+  await routes.click();
+  const { width, height } = viewportOf(page);
+  const [x, y] = [Math.round(width * 0.625), Math.round(height * 0.55)];
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 40, y + 30, { steps: 4 });
+  await page.mouse.up();
+  await page.waitForTimeout(SETTLE_MS);
+  await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Vega');
 });
 
 test.describe('touch', () => {

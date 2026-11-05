@@ -6,6 +6,7 @@ import { regionColors, starHalos, type StarHalo } from '../lib/worldView';
 import { useUi } from '../store/ui';
 import { useWorld } from '../store/world';
 import type { Position } from '../types/catalogue';
+import { usePositionAttribute } from './starAttributes';
 import type { SystemAnchor } from './systemAnchors';
 
 const RING_PX = 44;
@@ -73,14 +74,15 @@ export function Highlights({ positions, anchors }: HighlightsProps) {
   const selectedSystemIds = useUi((state) => state.selectedSystemIds);
   const selected = useMemo(
     () => new BufferAttribute(new Float32Array(positions.length / 3), 1),
-    [positions],
+    [positions.length],
   );
+  const position = usePositionAttribute(positions);
   const geometry = useMemo(() => {
     const result = new BufferGeometry();
-    result.setAttribute('position', new BufferAttribute(positions, 3));
+    result.setAttribute('position', position);
     result.setAttribute('aSelected', selected);
     return result;
-  }, [positions, selected]);
+  }, [position, selected]);
   const uniforms = useMemo(() => ({ uTime: { value: 0 }, uPixelRatio: { value: 1 } }), []);
   const material = useMemo(
     () =>
@@ -213,14 +215,15 @@ export function TagHalos({ positions, mask, starIndexById }: TagHalosProps) {
   const tags = useWorld((state) => state.world.tags);
   const halo = useMemo(
     () => new BufferAttribute(new Float32Array((positions.length / 3) * 4), 4),
-    [positions],
+    [positions.length],
   );
+  const position = usePositionAttribute(positions);
   const geometry = useMemo(() => {
     const result = new BufferGeometry();
-    result.setAttribute('position', new BufferAttribute(positions, 3));
+    result.setAttribute('position', position);
     result.setAttribute('aHalo', halo);
     return result;
-  }, [halo, positions]);
+  }, [halo, position]);
   const material = useHaloMaterial(HALO_PX);
 
   useEffect(() => {
@@ -252,14 +255,15 @@ export function RegionHalos({ positions, anchors }: HighlightsProps) {
   const regions = useWorld((state) => state.world.regions);
   const halo = useMemo(
     () => new BufferAttribute(new Float32Array((positions.length / 3) * 4), 4),
-    [positions],
+    [positions.length],
   );
+  const position = usePositionAttribute(positions);
   const geometry = useMemo(() => {
     const result = new BufferGeometry();
-    result.setAttribute('position', new BufferAttribute(positions, 3));
+    result.setAttribute('position', position);
     result.setAttribute('aHalo', halo);
     return result;
-  }, [halo, positions]);
+  }, [halo, position]);
   const material = useHaloMaterial(REGION_HALO_PX, regionHaloFragmentShader);
 
   useEffect(() => {

@@ -10,7 +10,7 @@ import {
   MIN_CAMERA_DISTANCE,
 } from '../lib/camera';
 import { isTypingTarget } from '../lib/keys';
-import { useUi } from '../store/ui';
+import { useUi, type FlyRequest } from '../store/ui';
 import type { Position, Star } from '../types/catalogue';
 import { pickStarAt } from './pickStarAt';
 import { starPosition } from './starAttributes';
@@ -36,9 +36,12 @@ export function CameraRig({ stars, positions, mask, onCameraRest }: CameraRigPro
   const flyHome = useUi((state) => state.flyHome);
   const clearOrbitStar = useUi((state) => state.clearOrbitStar);
 
+  // Once per request: this also runs whenever the stars move, which isn't another flight.
+  const handledFly = useRef<FlyRequest | null>(null);
   useEffect(() => {
     const rig = controls.current;
-    if (!rig || !flyRequest) return;
+    if (!rig || !flyRequest || handledFly.current === flyRequest) return;
+    handledFly.current = flyRequest;
     if (flyRequest.kind === 'home') {
       void rig.setLookAt(...HOME_POSITION, ...HOME_TARGET, true);
       return;
@@ -71,6 +74,20 @@ export function CameraRig({ stars, positions, mask, onCameraRest }: CameraRigPro
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [flyHome]);
+
+  // The camera travels with the star it orbits as the map's year changes.
+  const lastPositions = useRef(positions);
+  useEffect(() => {
+    const rig = controls.current;
+    if (lastPositions.current === positions) return;
+    lastPositions.current = positions;
+    const index = stars.findIndex((star) => star.id === orbitStarId);
+    if (!rig || index < 0) return;
+    const star = new Vector3(...starPosition(positions, index));
+    const target = rig.getTarget(new Vector3());
+    const position = rig.getPosition(new Vector3()).add(star).sub(target);
+    void rig.setLookAt(position.x, position.y, position.z, star.x, star.y, star.z, false);
+  }, [orbitStarId, positions, stars]);
 
   // A pan moves the orbit point off the star; the end value ignores any flight still settling.
   useEffect(() => {
