@@ -69,6 +69,27 @@ export interface Planet {
   readonly inHabitableZone?: boolean; // derived from host hzAu
 }
 
+export interface Probe {
+  readonly id: string;
+  readonly name: string;
+  readonly pos: Position; // galactic, light-years, Sun at origin, at the reference epoch
+  readonly velLyPerYear: Position; // galactic
+  readonly speedKmS: number;
+}
+
+export interface Pulsar {
+  readonly id: string; // B name, e.g. 'B0531+21'
+  readonly jName: string;
+  readonly direction: Position; // galactic unit vector, from catalogue RA and Dec
+  readonly plaquePeriodS: number; // as engraved in 1972, which later measurements refine
+}
+
+export interface ProbeData {
+  readonly epochYear: number;
+  readonly probes: readonly Probe[];
+  readonly pulsars: readonly Pulsar[];
+}
+
 export interface CatalogueSource {
   readonly name: string;
   readonly version: string;

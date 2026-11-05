@@ -1,5 +1,6 @@
 import { movedWaypoints, routeLegs, routeLengthLy, withoutWaypoint } from '../lib/routes';
 import { formatValue } from '../lib/starFacts';
+import { formatTravelTime, legTravelTime, routeTravelTime } from '../lib/travel';
 import { systemCustomName, withCustomName } from '../lib/worldView';
 import type { Catalogue } from '../store/catalogue';
 import { useUi } from '../store/ui';
@@ -23,6 +24,7 @@ function Waypoints({ route, catalogue }: { readonly route: Route; readonly catal
   const moveWaypoint = useWorld((state) => state.moveWaypoint);
   const removeWaypoint = useWorld((state) => state.removeWaypoint);
   const nameOf = useSystemName(catalogue);
+  const drive = useWorld((state) => state.world.drive);
   return (
     <ol aria-label="Waypoints" className="mt-2">
       {route.waypoints.map((id, i) => {
@@ -34,7 +36,8 @@ function Waypoints({ route, catalogue }: { readonly route: Route; readonly catal
           <li key={`${id}:${i}`} className="border-t border-slate-800/70 py-1 text-xs">
             {leg[0] && (
               <p data-testid="leg-distance" className="text-slate-400 tabular-nums">
-                ↓ {formatValue(leg[0].distanceLy, 2, 'ly')}
+                ↓ {formatValue(leg[0].distanceLy, 2, 'ly')} ·{' '}
+                {formatTravelTime(legTravelTime(drive, catalogue.systems, leg[0]))}
               </p>
             )}
             <div className="flex items-center gap-1">
@@ -176,6 +179,7 @@ function routeTitle(route: Route, nameOf: (id: string) => string): string {
 
 export function RoutePanel({ catalogue }: { readonly catalogue: Catalogue }) {
   const routes = useWorld((state) => state.world.routes);
+  const drive = useWorld((state) => state.world.drive);
   const hiddenRouteIds = useUi((state) => state.hiddenRouteIds);
   const expandedRouteId = useUi((state) => state.expandedRouteId);
   const showRoute = useUi((state) => state.showRoute);
@@ -194,7 +198,8 @@ export function RoutePanel({ catalogue }: { readonly catalogue: Catalogue }) {
       {routes.map((route) => {
         const title = routeTitle(route, nameOf);
         const expanded = route.id === expandedRouteId;
-        const total = routeLengthLy(routeLegs(route.waypoints, catalogue.systemsById));
+        const legs = routeLegs(route.waypoints, catalogue.systemsById);
+        const total = routeLengthLy(legs);
         return (
           <li key={route.id} className="border-b border-slate-800/70 py-1.5 last:border-b-0">
             <div className="flex items-center gap-2">
@@ -219,8 +224,13 @@ export function RoutePanel({ catalogue }: { readonly catalogue: Catalogue }) {
                   />
                   <span className="truncate">{title}</span>
                 </span>
-                <span data-testid="route-total" className="text-xs text-slate-400 tabular-nums">
-                  {formatValue(total, 2, 'ly')}
+                <span className="shrink-0 text-right text-xs text-slate-400 tabular-nums">
+                  <span data-testid="route-total" className="block">
+                    {formatValue(total, 2, 'ly')}
+                  </span>
+                  <span data-testid="route-time" className="block">
+                    {formatTravelTime(routeTravelTime(drive, catalogue.systems, legs))}
+                  </span>
                 </span>
               </button>
             </div>

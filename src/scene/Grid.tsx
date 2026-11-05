@@ -1,6 +1,8 @@
 import { useEffect, useMemo } from 'react';
 import { BufferAttribute, BufferGeometry, ShaderMaterial } from 'three';
+import { galacticToScene } from '../lib/coords';
 import { useUi } from '../store/ui';
+import type { Star } from '../types/catalogue';
 import {
   dropLineVertices,
   gridVertices,
@@ -35,7 +37,14 @@ function GalacticGrid({ radiusLy }: { readonly radiusLy: number }) {
   return <PlaneLines vertices={vertices} color="#3f6f9f" opacity={0.25} />;
 }
 
-function RangeRings({ radiusLy }: { readonly radiusLy: number }) {
+// Rings count distance from the reference star, on a plane through it parallel to the galaxy's.
+function RangeRings({
+  radiusLy,
+  reference,
+}: {
+  readonly radiusLy: number;
+  readonly reference?: Star;
+}) {
   const { minor, major } = useMemo(() => {
     const radii = ringRadii(radiusLy);
     // Every fifth ring (25 ly) is brighter, to count distance from at a glance.
@@ -44,11 +53,12 @@ function RangeRings({ radiusLy }: { readonly radiusLy: number }) {
       major: ringVertices(radii.filter((radius) => radius % 25 === 0)),
     };
   }, [radiusLy]);
+  const [x, y, z] = galacticToScene(reference?.pos ?? [0, 0, 0]);
   return (
-    <>
+    <group position={[x, y, z]}>
       <PlaneLines vertices={minor} color="#5b9bd5" opacity={0.35} />
       <PlaneLines vertices={major} color="#8ec5f5" opacity={0.7} />
-    </>
+    </group>
   );
 }
 
@@ -109,16 +119,18 @@ function DropLines({
 export function Grid({
   positions,
   mask,
+  reference,
 }: {
   readonly positions: Float32Array;
   readonly mask: Uint8Array;
+  readonly reference?: Star;
 }) {
   const overlays = useUi((state) => state.overlays);
   const radiusLy = useUi((state) => state.filters.radiusLy);
   return (
     <>
       {overlays.grid && <GalacticGrid radiusLy={radiusLy} />}
-      {overlays.rings && <RangeRings radiusLy={radiusLy} />}
+      {overlays.rings && <RangeRings radiusLy={radiusLy} reference={reference} />}
       {overlays.dropLines && <DropLines positions={positions} mask={mask} />}
     </>
   );

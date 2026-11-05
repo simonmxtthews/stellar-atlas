@@ -4,7 +4,7 @@ import type { Catalogue } from '../../src/store/catalogue';
 import { useUi } from '../../src/store/ui';
 import type { Planet, Star, StarSystem } from '../../src/types/catalogue';
 import { StarModal } from '../../src/ui/StarModal';
-import { starOf, systemOf } from './map/fixtures';
+import { noProbes, starOf, systemOf } from './map/fixtures';
 
 const planet: Planet = {
   id: 'pl:b',
@@ -27,6 +27,7 @@ function catalogueOf(stars: readonly Star[], systems: readonly StarSystem[]): Ca
     starIndexById: new Map(stars.map((star, i) => [star.id, i])),
     systemsById: new Map(systems.map((system) => [system.id, system])),
     planetsById: new Map([[planet.id, planet]]),
+    probeData: noProbes,
   };
 }
 
@@ -116,8 +117,8 @@ describe('StarModal', () => {
     const section = screen.getByRole('region', { name: 'Nearest neighbours' });
     const buttons = within(section).getAllByRole('button');
     expect(buttons).toHaveLength(8);
-    expect(buttons[0]?.textContent).toBe('Neighbour 01.00 ly');
-    expect(buttons[7]?.textContent).toBe('Neighbour 78.00 ly');
+    expect(buttons[0]?.textContent).toBe('Neighbour 01.00 ly · 1 jump · 7.0 d');
+    expect(buttons[7]?.textContent).toBe('Neighbour 78.00 ly · 1 jump · 7.0 d');
     fireEvent.click(buttons[0] as HTMLElement);
     expect(useUi.getState().selectedSystemIds).toEqual(['sys:n0']);
   });

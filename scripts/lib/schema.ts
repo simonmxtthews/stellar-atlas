@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { CatalogueMeta, Planet, Star, StarSystem } from '../../src/types/catalogue';
+import type { CatalogueMeta, Planet, ProbeData, Star, StarSystem } from '../../src/types/catalogue';
 
 const position = z.tuple([z.number(), z.number(), z.number()]).readonly();
 const stringList = z.array(z.string().min(1)).readonly();
@@ -91,6 +91,33 @@ export const metaSchema = z.strictObject({
   attribution: z.string().min(1),
   idMap: z.record(z.string(), z.string()).readonly(),
 }) satisfies z.ZodType<CatalogueMeta>;
+
+export const probeDataSchema = z.strictObject({
+  epochYear: z.number(),
+  probes: z
+    .array(
+      z.strictObject({
+        id: z.string().min(1),
+        name: z.string().min(1),
+        pos: position,
+        velLyPerYear: position,
+        speedKmS: z.number().positive(),
+      }),
+    )
+    .length(5)
+    .readonly(),
+  pulsars: z
+    .array(
+      z.strictObject({
+        id: z.string().regex(/^B\d{4}[+-]\d{2}$/),
+        jName: z.string().regex(/^J\d{4}[+-]\d{4}$/),
+        direction: position,
+        plaquePeriodS: z.number().positive(),
+      }),
+    )
+    .length(14)
+    .readonly(),
+}) satisfies z.ZodType<ProbeData>;
 
 export interface Catalogue {
   readonly stars: readonly Star[];

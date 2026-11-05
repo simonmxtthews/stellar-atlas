@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { parseWorld } from '../../../src/lib/io';
 import { newWorld, useWorld } from '../../../src/store/world';
 
 const initial = useWorld.getState();
@@ -57,6 +58,34 @@ describe('routes', () => {
     const id = actions().addRoute(['a', 'b']);
     actions().deleteRoute(id);
     expect(world().routes).toEqual([]);
+  });
+});
+
+describe('drive model', () => {
+  it('defaults to the jump drive, and an edit can be undone', () => {
+    expect(world().drive.type).toBe('jump');
+    actions().setDrive({ type: 'ftl-speed', multipleOfC: 50 });
+    expect(world().drive).toEqual({ type: 'ftl-speed', multipleOfC: 50 });
+    actions().undo();
+    expect(world().drive.type).toBe('jump');
+  });
+
+  it('makes one undo step of repeated edits to a field', () => {
+    actions().setDrive({ type: 'jump', maxJumpLy: 11, daysPerJump: 7 }, 'maxJumpLy');
+    actions().setDrive({ type: 'jump', maxJumpLy: 12, daysPerJump: 7 }, 'maxJumpLy');
+    actions().undo();
+    expect(world().drive).toEqual({ type: 'jump', maxJumpLy: 10, daysPerJump: 7 });
+  });
+
+  it('survives the world schema, whichever model is set', () => {
+    for (const drive of [
+      { type: 'sublight', fractionC: 0.1, accelG: 1 },
+      { type: 'sublight', fractionC: 0.1 },
+      { type: 'ftl-speed', multipleOfC: 50 },
+    ] as const) {
+      actions().setDrive(drive);
+      expect(parseWorld(world()).drive).toEqual(drive);
+    }
   });
 });
 

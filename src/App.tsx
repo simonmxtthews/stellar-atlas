@@ -4,6 +4,7 @@ import { CAMERA_FAR, CAMERA_FOV, CAMERA_NEAR, HOME_POSITION } from './lib/camera
 import { computeVisibleMask, countVisible } from './lib/filters';
 import { taggedStarIds } from './lib/worldView';
 import { Scene } from './scene/Scene';
+import { systemAnchors } from './scene/systemAnchors';
 import { useCatalogue, type Catalogue } from './store/catalogue';
 import { useUi } from './store/ui';
 import { useWorld } from './store/world';
@@ -34,6 +35,8 @@ function remapOnceHydrated(idMap: Readonly<Record<string, string>>): () => void 
 
 function Map({ catalogue }: { readonly catalogue: Catalogue }) {
   const filters = useUi((state) => state.filters);
+  const referenceStarId = useUi((state) => state.referenceStarId);
+  const reference = catalogue.starsById.get(referenceStarId);
   const starMeta = useWorld((state) => state.world.starMeta);
   // Only taggedOnly needs the tags, so that editing a note doesn't normally touch the mask.
   const tagged = useMemo(
@@ -41,17 +44,27 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
     [filters.taggedOnly, starMeta],
   );
   const mask = useMemo(
-    () => computeVisibleMask(catalogue.stars, catalogue.systemsById, filters, tagged),
-    [catalogue, filters, tagged],
+    () => computeVisibleMask(catalogue.stars, catalogue.systemsById, filters, tagged, reference),
+    [catalogue, filters, reference, tagged],
   );
+  const anchors = useMemo(
+    () => systemAnchors(catalogue.systems, catalogue.starIndexById, mask),
+    [catalogue, mask],
+  );
+  const visibleSystems = useMemo(() => anchors.map(({ system }) => system), [anchors]);
   const visible = useMemo(() => countVisible(catalogue.stars, mask), [catalogue, mask]);
   return (
     <>
       <Canvas camera={CAMERA}>
-        <Scene catalogue={catalogue} mask={mask} />
+        <Scene
+          catalogue={catalogue}
+          mask={mask}
+          anchors={anchors}
+          visibleSystems={visibleSystems}
+        />
       </Canvas>
       <FilterPanel stars={catalogue.stars} visible={visible} />
-      <Toolbar catalogue={catalogue} />
+      <Toolbar catalogue={catalogue} visibleSystems={visibleSystems} />
       <SearchBar catalogue={catalogue} />
       <StarTooltip catalogue={catalogue} />
       <StarModal catalogue={catalogue} />

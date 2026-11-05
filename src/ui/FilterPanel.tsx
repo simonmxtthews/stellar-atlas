@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { MAX_RADIUS_LY, MIN_RADIUS_LY } from '../lib/filters';
+import { MAX_RADIUS_LY, MIN_RADIUS_LY, SOL_ID } from '../lib/filters';
 import { useUi, type Overlays } from '../store/ui';
 import type { SpectralClass, Star } from '../types/catalogue';
 
@@ -69,6 +69,8 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
   const filters = useUi((state) => state.filters);
   const overlays = useUi((state) => state.overlays);
   const orbitStarId = useUi((state) => state.orbitStarId);
+  const referenceStarId = useUi((state) => state.referenceStarId);
+  const setReference = useUi((state) => state.setReference);
   const selectedCount = useUi((state) => state.selectedSystemIds.length);
   const clearSelection = useUi((state) => state.clearSelection);
   const labelCount = useUi((state) => state.labelCount);
@@ -81,6 +83,7 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
     return CLASS_LABELS.filter(([cls]) => present.has(cls));
   }, [stars]);
   const orbitStar = stars.find((star) => star.id === orbitStarId);
+  const reference = stars.find((star) => star.id === referenceStarId);
 
   return (
     <aside
@@ -104,6 +107,18 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
       <p data-testid="orbit-target" className="text-xs text-slate-400">
         Orbit target: {orbitStar?.displayName ?? 'free'}
       </p>
+      {reference && reference.id !== SOL_ID && (
+        <p className="flex items-center justify-between text-xs text-amber-200">
+          <span data-testid="reference-star">Distances from {reference.displayName}</span>
+          <button
+            type="button"
+            onClick={() => setReference(SOL_ID)}
+            className="rounded px-2 py-0.5 text-slate-400 hover:bg-slate-800"
+          >
+            Back to Sol
+          </button>
+        </p>
+      )}
       <p data-testid="label-count" className="text-xs text-slate-400">
         {labelCount} labels
       </p>
@@ -132,7 +147,8 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
               type="range"
               aria-label="Radius"
               min={MIN_RADIUS_LY}
-              max={MAX_RADIUS_LY}
+              // Away from Sol, the far side of the catalogue is further off than its radius.
+              max={MAX_RADIUS_LY + Math.ceil(reference?.distLy ?? 0)}
               step={1}
               value={filters.radiusLy}
               onChange={(event) => setFilters({ radiusLy: Number(event.target.value) })}
@@ -185,7 +201,7 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
             Drag to orbit, right-drag to pan, scroll to zoom. Click a star to select it, shift-click
             to add more; <kbd>Esc</kbd> closes then clears. Double-click flies to a star;{' '}
             <kbd>H</kbd> returns to Sol; <kbd>/</kbd> searches; <kbd>R</kbd> plots a route;{' '}
-            <kbd>M</kbd> measures.
+            <kbd>A</kbd> finds one; <kbd>M</kbd> measures.
           </p>
         </div>
       )}

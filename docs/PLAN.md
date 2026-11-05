@@ -350,10 +350,10 @@ Each milestone is done when every box below is ticked, tests pass and lint is cl
 
 **M6 — World-building tools**
 
-- [ ] Drive model setting updates every travel time; travel unit tests pass
-- [ ] Jump-network overlay with connected-component colours
-- [ ] Auto-route via shortest path; hub ranking computed in a Web Worker
-- [ ] Reference-star mode, range sphere and probe trajectory overlay with closest-approach table
+- [x] Drive model setting updates every travel time; travel unit tests pass
+- [x] Jump-network overlay with connected-component colours
+- [x] Auto-route via shortest path; hub ranking computed in a Web Worker
+- [x] Reference-star mode, range sphere and probe trajectory overlay with closest-approach table
 
 **M7 — Polish**
 

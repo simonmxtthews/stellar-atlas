@@ -20,3 +20,14 @@ export function nearestSystems(
     .sort((a, b) => a.distanceLy - b.distanceLy)
     .slice(0, count);
 }
+
+// Nearest first.
+export function systemsWithin(
+  origin: StarSystem,
+  systems: readonly StarSystem[],
+  radiusLy: number,
+): readonly Neighbour[] {
+  return nearestSystems(origin, systems, systems.length).filter(
+    ({ distanceLy }) => distanceLy <= radiusLy,
+  );
+}

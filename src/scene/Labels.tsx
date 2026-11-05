@@ -16,6 +16,7 @@ import {
 } from '../lib/labels';
 import { galacticToScene } from '../lib/coords';
 import { distanceLy, routeLegs, type RouteLeg } from '../lib/routes';
+import { formatTravelTime, legTravelTime } from '../lib/travel';
 import { formatValue } from '../lib/starFacts';
 import {
   routeEndpointIds,
@@ -27,7 +28,10 @@ import {
 import type { Catalogue } from '../store/catalogue';
 import { useUi } from '../store/ui';
 import { useWorld } from '../store/world';
-import { DRAFT_COLOR, RULER_COLOR } from './Routes';
+import type { StarSystem } from '../types/catalogue';
+import type { DriveModel } from '../types/world';
+import { useAutoRoutePath } from '../ui/useAutoRoute';
+import { AUTO_ROUTE_COLOR, DRAFT_COLOR, RULER_COLOR } from './Routes';
 import { starPosition } from './starAttributes';
 import type { SystemAnchor } from './systemAnchors';
 
@@ -49,7 +53,7 @@ function tierOf(
 }
 
 // Text that faces the camera at a constant pixel size, offset from its anchor in ems.
-const ScreenText = memo(function ScreenText({
+export const ScreenText = memo(function ScreenText({
   x,
   y,
   z,
@@ -101,7 +105,7 @@ const ScreenText = memo(function ScreenText({
   );
 });
 
-function useLabelMaterial(): MeshBasicMaterial {
+export function useLabelMaterial(): MeshBasicMaterial {
   const material = useMemo(
     () => new MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false }),
     [],
@@ -114,6 +118,8 @@ function legLabels(
   prefix: string,
   legs: readonly RouteLeg[],
   color: string,
+  drive: DriveModel,
+  systems: readonly StarSystem[],
 ): readonly LabelCandidate[] {
   return legs.map((leg, i) => {
     const [x, y, z] = galacticToScene([
@@ -128,7 +134,7 @@ function legLabels(
       x,
       y,
       z,
-      text: formatValue(leg.distanceLy, 2, 'ly'),
+      text: `${formatValue(leg.distanceLy, 2, 'ly')} · ${formatTravelTime(legTravelTime(drive, systems, leg))}`,
     };
   });
 }
@@ -137,11 +143,18 @@ interface LabelsProps {
   readonly catalogue: Catalogue;
   readonly positions: Float32Array;
   readonly anchors: readonly SystemAnchor[];
+  readonly visibleSystems: readonly StarSystem[];
   readonly cameraEpoch: number; // bumped when the camera comes to rest
 }
 
-export function Labels({ catalogue, positions, anchors, cameraEpoch }: LabelsProps) {
-  const { starsById, systemsById } = catalogue;
+export function Labels({
+  catalogue,
+  positions,
+  anchors,
+  visibleSystems,
+  cameraEpoch,
+}: LabelsProps) {
+  const { starsById, systems, systemsById } = catalogue;
   const camera = useThree((state) => state.camera);
   const size = useThree((state) => state.size);
   const selectedSystemIds = useUi((state) => state.selectedSystemIds);
@@ -151,6 +164,8 @@ export function Labels({ catalogue, positions, anchors, cameraEpoch }: LabelsPro
   const rulerStarIds = useUi((state) => state.rulerStarIds);
   const routes = useWorld((state) => state.world.routes);
   const starMeta = useWorld((state) => state.world.starMeta);
+  const drive = useWorld((state) => state.world.drive);
+  const autoRoutePath = useAutoRoutePath(catalogue, visibleSystems);
   const material = useLabelMaterial();
 
   const shownRoutes = useMemo(
@@ -160,7 +175,11 @@ export function Labels({ catalogue, positions, anchors, cameraEpoch }: LabelsPro
 
   const systemCandidates = useMemo(() => {
     const selected = new Set(selectedSystemIds);
-    const endpoints = new Set([...routeEndpointIds(shownRoutes), ...routeDraft]);
+    const endpoints = new Set([
+      ...routeEndpointIds(shownRoutes),
+      ...routeDraft,
+      ...(autoRoutePath ?? []),
+    ]);
     for (const starId of rulerStarIds) {
       const systemId = starsById.get(starId)?.systemId;
       if (systemId !== undefined) endpoints.add(systemId);
@@ -180,6 +199,7 @@ export function Labels({ catalogue, positions, anchors, cameraEpoch }: LabelsPro
     });
   }, [
     anchors,
+    autoRoutePath,
     positions,
     routeDraft,
     rulerStarIds,
@@ -191,9 +211,22 @@ export function Labels({ catalogue, positions, anchors, cameraEpoch }: LabelsPro
 
   const candidates = useMemo(() => {
     const legs = shownRoutes.flatMap((route) =>
-      legLabels(route.id, routeLegs(route.waypoints, systemsById), route.color),
+      legLabels(route.id, routeLegs(route.waypoints, systemsById), route.color, drive, systems),
     );
-    const draft = legLabels('draft', routeLegs(routeDraft, systemsById), DRAFT_COLOR);
+    const draft = legLabels(
+      'draft',
+      routeLegs(routeDraft, systemsById),
+      DRAFT_COLOR,
+      drive,
+      systems,
+    );
+    const autoRoute = legLabels(
+      'autoroute',
+      routeLegs(autoRoutePath ?? [], systemsById),
+      AUTO_ROUTE_COLOR,
+      drive,
+      systems,
+    );
     const [rulerFrom, rulerTo] = rulerStarIds.map((id) => starsById.get(id));
     const ruler: readonly LabelCandidate[] =
       rulerFrom && rulerTo
@@ -201,18 +234,30 @@ export function Labels({ catalogue, positions, anchors, cameraEpoch }: LabelsPro
             'ruler',
             [
               {
-                fromId: rulerFrom.id,
-                toId: rulerTo.id,
+                fromId: rulerFrom.systemId,
+                toId: rulerTo.systemId,
                 from: rulerFrom.pos,
                 to: rulerTo.pos,
                 distanceLy: distanceLy(rulerFrom.pos, rulerTo.pos),
               },
             ],
             RULER_COLOR,
+            drive,
+            systems,
           ).map((label) => ({ ...label, tier: LabelTier.Selected }))
         : [];
-    return [...systemCandidates, ...legs, ...draft, ...ruler];
-  }, [routeDraft, rulerStarIds, shownRoutes, starsById, systemCandidates, systemsById]);
+    return [...systemCandidates, ...legs, ...draft, ...autoRoute, ...ruler];
+  }, [
+    autoRoutePath,
+    drive,
+    routeDraft,
+    rulerStarIds,
+    shownRoutes,
+    starsById,
+    systemCandidates,
+    systems,
+    systemsById,
+  ]);
 
   // Only on camera rest, a resize or a change of candidates, never per frame.
   const labels = useMemo(() => {

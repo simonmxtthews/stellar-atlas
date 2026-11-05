@@ -1,4 +1,5 @@
 import type { SpectralClass, Star, StarSystem } from '../types/catalogue';
+import { distanceLy } from './routes';
 
 export const SOL_ID = 'hyg:0';
 export const MIN_RADIUS_LY = 5;
@@ -20,12 +21,18 @@ export const DEFAULT_FILTERS: StarFilters = {
   taggedOnly: false,
 };
 
+// Distances in the UI run from the reference star. Sol's use the catalogue's own figure.
+export function distanceFromReference(star: Star, reference: Star | undefined): number {
+  return !reference || reference.id === SOL_ID ? star.distLy : distanceLy(star.pos, reference.pos);
+}
+
 // One entry per star, 1 when visible. Sol stays visible as the map's fixed landmark.
 export function computeVisibleMask(
   stars: readonly Star[],
   systemsById: ReadonlyMap<string, StarSystem>,
   filters: StarFilters,
   taggedStarIds: ReadonlySet<string> = new Set(),
+  reference?: Star,
 ): Uint8Array {
   const hidden = new Set(filters.hiddenClasses);
   const mask = new Uint8Array(stars.length);
@@ -33,7 +40,7 @@ export function computeVisibleMask(
     const system = systemsById.get(star.systemId);
     const visible =
       star.id === SOL_ID ||
-      (star.distLy <= filters.radiusLy &&
+      (distanceFromReference(star, reference) <= filters.radiusLy &&
         !hidden.has(star.spectral.cls) &&
         (!filters.hasPlanets || (system?.planetCount ?? 0) > 0) &&
         (!filters.multipleOnly || (system?.starIds.length ?? 0) > 1) &&
@@ -49,10 +56,11 @@ export function revealFilters(
   system: StarSystem,
   filters: StarFilters,
   tagged = false,
+  reference?: Star,
 ): StarFilters {
   if (star.id === SOL_ID) return filters;
   return {
-    radiusLy: Math.max(filters.radiusLy, Math.ceil(star.distLy)),
+    radiusLy: Math.max(filters.radiusLy, Math.ceil(distanceFromReference(star, reference))),
     hiddenClasses: filters.hiddenClasses.filter((cls) => cls !== star.spectral.cls),
     hasPlanets: filters.hasPlanets && system.planetCount > 0,
     multipleOnly: filters.multipleOnly && system.starIds.length > 1,

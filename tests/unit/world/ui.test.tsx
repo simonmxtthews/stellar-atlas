@@ -8,7 +8,7 @@ import { useUi } from '../../../src/store/ui';
 import { newWorld, useWorld } from '../../../src/store/world';
 import { StarWorldSection } from '../../../src/ui/StarWorldSection';
 import { Toolbar } from '../../../src/ui/Toolbar';
-import { sol, starOf, systemOf } from '../map/fixtures';
+import { noProbes, sol, starOf, systemOf } from '../map/fixtures';
 
 const alpha = starOf({ id: 'a', displayName: 'Alpha', pos: [3, 4, 0], distLy: 5 });
 const beta = starOf({ id: 'b', displayName: 'Beta', pos: [3, 4, 12], distLy: 13 });
@@ -21,6 +21,7 @@ const catalogue: Catalogue = {
   starIndexById: new Map(stars.map((star, i) => [star.id, i])),
   systemsById: new Map(systems.map((system) => [system.id, system])),
   planetsById: new Map(),
+  probeData: noProbes,
 };
 const [solId, alphaId, betaId] = systems.map((system) => system.id) as [string, string, string];
 
@@ -41,7 +42,7 @@ afterEach(cleanup);
 
 describe('route mode keys', () => {
   beforeEach(() => {
-    render(<Toolbar catalogue={catalogue} />);
+    render(<Toolbar catalogue={catalogue} visibleSystems={systems} />);
   });
 
   it('R starts, clicks add, Backspace removes, Enter saves and shows the route', () => {
@@ -78,7 +79,7 @@ describe('route mode keys', () => {
     useUi.getState().pickRulerStar('a');
     useUi.getState().pickRulerStar('b');
     return screen.findByTestId('ruler-readout').then((readout) => {
-      expect(readout.textContent).toBe('Alpha → Beta: 12.00 ly');
+      expect(readout.textContent).toBe('Alpha → Beta: 12.00 ly · no jump path');
       expect(world().routes).toEqual([]);
       press('m');
       expect(useUi.getState()).toMatchObject({ tool: 'none', rulerStarIds: [] });
@@ -137,7 +138,7 @@ describe('route panel', () => {
   beforeEach(() => {
     useWorld.getState().addRoute([solId, alphaId, betaId]);
     useUi.getState().togglePanel('routes');
-    render(<Toolbar catalogue={catalogue} />);
+    render(<Toolbar catalogue={catalogue} visibleSystems={systems} />);
     fireEvent.click(screen.getByRole('button', { name: /Sol → Beta/ }));
   });
 
@@ -145,8 +146,8 @@ describe('route panel', () => {
 
   it('shows per-leg distances and the total', () => {
     expect(screen.getAllByTestId('leg-distance').map((leg) => leg.textContent)).toEqual([
-      '↓ 5.00 ly',
-      '↓ 12.00 ly',
+      '↓ 5.00 ly · 1 jump · 7.0 d',
+      '↓ 12.00 ly · no jump path',
     ]);
     expect(screen.getByTestId('route-total').textContent).toBe('17.00 ly');
   });
@@ -243,7 +244,7 @@ describe('star world section', () => {
 describe('world panel', () => {
   beforeEach(() => {
     useUi.getState().togglePanel('world');
-    render(<Toolbar catalogue={catalogue} />);
+    render(<Toolbar catalogue={catalogue} visibleSystems={systems} />);
   });
 
   const importText = async (text: string) => {

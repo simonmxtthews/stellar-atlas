@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useMemo, type ReactNode } from 'react';
+import { distanceFromReference, SOL_ID } from '../lib/filters';
 import { nearestSystems } from '../lib/neighbours';
 import {
   archiveOverviewUrl,
@@ -10,6 +11,7 @@ import {
   spectralCode,
   spectralReading,
 } from '../lib/starFacts';
+import { formatTravelTime, systemTravelTime } from '../lib/travel';
 import { customNameOf } from '../lib/worldView';
 import type { Catalogue } from '../store/catalogue';
 import { useUi } from '../store/ui';
@@ -17,6 +19,7 @@ import { useWorld } from '../store/world';
 import type { Planet, Star, StarSystem } from '../types/catalogue';
 import { HzStrip } from './HzStrip';
 import { ModalSection } from './ModalSection';
+import { RangeSection } from './RangeSection';
 import { StarWorldSection } from './StarWorldSection';
 
 const NEIGHBOUR_COUNT = 8;
@@ -30,7 +33,7 @@ function Fact({ label, value }: { readonly label: string; readonly value: ReactN
   );
 }
 
-function StarFacts({ star }: { readonly star: Star }) {
+function StarFacts({ star, reference }: { readonly star: Star; readonly reference?: Star }) {
   const [x, y, z] = star.pos;
   return (
     <ModalSection title="Star facts">
@@ -50,6 +53,12 @@ function StarFacts({ star }: { readonly star: Star }) {
         <Fact label="Apparent magnitude" value={formatValue(star.mag, 2)} />
         <Fact label="Absolute magnitude" value={formatValue(star.absMag, 2)} />
         <Fact label="Distance from Sol" value={formatValue(star.distLy, 2, 'ly')} />
+        {reference && reference.id !== SOL_ID && (
+          <Fact
+            label={`Distance from ${reference.displayName}`}
+            value={formatValue(distanceFromReference(star, reference), 2, 'ly')}
+          />
+        )}
         <Fact
           label="Galactic x, y, z"
           value={`${formatValue(x, 2)}, ${formatValue(y, 2)}, ${formatValue(z, 2)} ly`}
@@ -143,6 +152,7 @@ function Neighbours({
   readonly catalogue: Catalogue;
 }) {
   const select = useUi((state) => state.select);
+  const drive = useWorld((state) => state.world.drive);
   const neighbours = useMemo(
     () => nearestSystems(system, catalogue.systems, NEIGHBOUR_COUNT),
     [catalogue, system],
@@ -158,8 +168,14 @@ function Neighbours({
               className="flex w-full justify-between gap-3 rounded px-1 py-0.5 text-left hover:bg-slate-800"
             >
               <span className="truncate">{neighbour.name}</span>
-              <span className="text-slate-400 tabular-nums">
-                {formatValue(distanceLy, 2, 'ly')}
+              <span
+                data-testid="neighbour-distance"
+                className="text-right text-slate-400 tabular-nums"
+              >
+                {formatValue(distanceLy, 2, 'ly')} ·{' '}
+                {formatTravelTime(
+                  systemTravelTime(drive, catalogue.systems, system.id, neighbour.id, distanceLy),
+                )}
               </span>
             </button>
           </li>
@@ -180,6 +196,7 @@ export function StarModal({ catalogue }: { readonly catalogue: Catalogue }) {
   const closeDetail = useUi((state) => state.closeDetail);
   const showStar = useUi((state) => state.showStar);
   const starMeta = useWorld((state) => state.world.starMeta);
+  const referenceStarId = useUi((state) => state.referenceStarId);
 
   const system = detail && catalogue.systemsById.get(detail.systemId);
   const members = system?.starIds.flatMap((id) => catalogue.starsById.get(id) ?? []) ?? [];
@@ -243,10 +260,11 @@ export function StarModal({ catalogue }: { readonly catalogue: Catalogue }) {
             </Tabs.Root>
           )}
 
-          <StarFacts star={star} />
+          <StarFacts star={star} reference={catalogue.starsById.get(referenceStarId)} />
           <Planets star={star} catalogue={catalogue} />
           <Neighbours system={system} catalogue={catalogue} />
           <StarWorldSection star={star} />
+          <RangeSection system={system} catalogue={catalogue} />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
