@@ -1,4 +1,5 @@
 import type { Position, StarSystem } from '../types/catalogue';
+import type { Route } from '../types/world';
 
 export interface RouteLeg {
   readonly fromId: string;
@@ -35,6 +36,11 @@ export function routeLegs(
 
 export function routeLengthLy(legs: readonly RouteLeg[]): number {
   return legs.reduce((total, leg) => total + leg.distanceLy, 0);
+}
+
+export function routeTitle(route: Route, nameOf: (id: string) => string): string {
+  if (route.name) return route.name;
+  return `${nameOf(route.waypoints[0] ?? '')} → ${nameOf(route.waypoints.at(-1) ?? '')}`;
 }
 
 function hasRepeat(waypoints: readonly string[]): boolean {

@@ -6,6 +6,7 @@ import { formatTravelTime, routeTravelTime, systemTravelTime } from '../lib/trav
 import type { Catalogue } from '../store/catalogue';
 import { useUi, type Panel } from '../store/ui';
 import { useWorld } from '../store/world';
+import { AboutPanel } from './AboutPanel';
 import { BUTTON_CLASS } from './controlStyles';
 import type { StarSystem } from '../types/catalogue';
 import { NetworkPanel } from './NetworkPanel';
@@ -24,6 +25,7 @@ const PANELS: readonly (readonly [Panel, string, string])[] = [
   ['drive', 'Drive', 'Drive panel'],
   ['network', 'Network', 'Network panel'],
   ['probes', 'Probes', 'Probes panel'],
+  ['about', 'About', 'About panel'],
 ];
 
 function saveAutoRoute(path: readonly string[] | null): void {
@@ -288,6 +290,7 @@ export function Toolbar({
             <NetworkPanel catalogue={catalogue} visibleSystems={visibleSystems} />
           )}
           {panel === 'probes' && <ProbesPanel catalogue={catalogue} />}
+          {panel === 'about' && <AboutPanel meta={catalogue.meta} />}
         </aside>
       )}
     </div>

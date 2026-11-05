@@ -357,9 +357,9 @@ Each milestone is done when every box below is ticked, tests pass and lint is cl
 
 **M7 — Polish**
 
-- [ ] Regions with legend; PNG snapshot and routes CSV export
-- [ ] About panel with HYG and NASA Exoplanet Archive attribution and data build date
-- [ ] Full Playwright suite passes (desktop, 768 px tablet and 390 px phone viewports); performance target met with 50 routes
+- [x] Regions with legend; PNG snapshot and routes CSV export
+- [x] About panel with HYG and NASA Exoplanet Archive attribution and data build date
+- [x] Full Playwright suite passes (desktop, 768 px tablet and 390 px phone viewports); performance target met with 50 routes
 
 ## Testing, risks and handoff notes
 

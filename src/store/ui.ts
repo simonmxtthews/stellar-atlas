@@ -29,7 +29,7 @@ export interface StarHover {
 }
 
 export type Tool = 'none' | 'route' | 'ruler' | 'autoroute';
-export type Panel = 'routes' | 'world' | 'drive' | 'network' | 'probes';
+export type Panel = 'routes' | 'world' | 'drive' | 'network' | 'probes' | 'about';
 
 export const DEFAULT_RANGE_SPHERE_LY = 10;
 

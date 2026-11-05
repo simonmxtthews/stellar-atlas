@@ -5,7 +5,7 @@ import { useUi } from '../store/ui';
 import type { StarSystem } from '../types/catalogue';
 import { CameraRig } from './CameraRig';
 import { Grid } from './Grid';
-import { Beacons, Highlights, TagHalos } from './Highlights';
+import { Beacons, Highlights, RegionHalos, TagHalos } from './Highlights';
 import { JumpNetwork } from './JumpNetwork';
 import { Labels, TagBadges } from './Labels';
 import { ProbeOverlay } from './ProbeOverlay';
@@ -41,6 +41,8 @@ export function Scene({
   const [cameraEpoch, onCameraRest] = useReducer((epoch: number) => epoch + 1, 0);
   return (
     <>
+      {/* Opaque rather than the page showing through, or a snapshot has no background. */}
+      <color attach="background" args={['#000000']} />
       <CameraRig
         stars={stars}
         positions={attributes.positions}
@@ -54,6 +56,7 @@ export function Scene({
       <Routes catalogue={catalogue} visibleSystems={visibleSystems} />
       <RangeSpheres catalogue={catalogue} />
       <Beacons beacons={referenceBeacons} />
+      <RegionHalos positions={attributes.positions} anchors={anchors} />
       <TagHalos positions={attributes.positions} mask={mask} starIndexById={starIndexById} />
       <Highlights positions={attributes.positions} anchors={anchors} />
       {/* Stars stay up while the label font loads. */}

@@ -4,7 +4,7 @@ import type { Catalogue } from '../../src/store/catalogue';
 import { useUi } from '../../src/store/ui';
 import type { Planet, Star, StarSystem } from '../../src/types/catalogue';
 import { StarModal } from '../../src/ui/StarModal';
-import { noProbes, starOf, systemOf } from './map/fixtures';
+import { noProbes, starOf, systemOf, testMeta } from './map/fixtures';
 
 const planet: Planet = {
   id: 'pl:b',
@@ -27,6 +27,7 @@ function catalogueOf(stars: readonly Star[], systems: readonly StarSystem[]): Ca
     starIndexById: new Map(stars.map((star, i) => [star.id, i])),
     systemsById: new Map(systems.map((system) => [system.id, system])),
     planetsById: new Map([[planet.id, planet]]),
+    meta: testMeta,
     probeData: noProbes,
   };
 }

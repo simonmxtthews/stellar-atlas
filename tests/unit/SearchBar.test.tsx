@@ -4,7 +4,7 @@ import { DEFAULT_FILTERS } from '../../src/lib/filters';
 import type { Catalogue } from '../../src/store/catalogue';
 import { useUi } from '../../src/store/ui';
 import { SearchBar } from '../../src/ui/SearchBar';
-import { noProbes, sol, starOf, systemOf } from './map/fixtures';
+import { noProbes, sol, starOf, systemOf, testMeta } from './map/fixtures';
 
 const tauCeti = starOf({
   id: 'hyg:1',
@@ -29,6 +29,7 @@ const catalogue: Catalogue = {
   starIndexById: new Map(stars.map((star, i) => [star.id, i])),
   systemsById: new Map(systems.map((system) => [system.id, system])),
   planetsById: new Map(),
+  meta: testMeta,
   probeData: noProbes,
 };
 
