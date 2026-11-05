@@ -32,3 +32,10 @@ Use Node 22.22.2 or newer on the 22.x line (`.nvmrc`); `nvm install` picks it up
 - Static build only (`vite build` → `dist/`); no server code, so both hosts serve the same output.
 - **GitHub Pages**: `.github/workflows/deploy.yml` builds on push to `main` and deploys with `actions/deploy-pages`. Vite `base` comes from the `VITE_BASE` env var (`/<repo-name>/` for Pages, `/` elsewhere); load data via `import.meta.env.BASE_URL`.
 - **Vercel**: import the repo, framework preset Vite, output `dist`; preview deploys per PR, production on `main`.
+
+## Git workflow
+
+- One branch per milestone: `m<n>-<short-name>`.
+- When the milestone's acceptance boxes are ticked and `npm test`, `npm run lint` and `npm run build` all pass:
+  merge into main with `git merge --no-ff`, push main, delete the branch.
+- If any check fails, do not merge. Stop and report.
