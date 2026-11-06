@@ -89,7 +89,7 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
   };
 
   return (
-    <div className="absolute top-3 left-3 z-5 w-60 text-sm text-slate-200 max-md:right-3 max-md:w-auto">
+    <div className="absolute top-3 left-3 z-5 w-60 text-sm text-ink max-md:right-3 max-md:w-auto">
       <input
         ref={input}
         type="search"
@@ -110,14 +110,14 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         onKeyDown={onKeyDown}
-        className="w-full rounded-lg border border-slate-700/60 bg-slate-950/85 px-3 py-2 backdrop-blur outline-none placeholder:text-slate-500 focus:border-sky-400 max-md:text-base"
+        className="w-full rounded-xl border border-line shadow-panel bg-panel px-3 py-2 backdrop-blur outline-none placeholder:text-faint focus:border-accent max-md:text-base"
       />
       <ul
         id={listId}
         role="listbox"
         aria-label="Search results"
         hidden={!open}
-        className="mt-1 max-h-[60dvh] w-80 overflow-y-auto rounded-lg border border-slate-700/60 bg-slate-950/95 py-1 backdrop-blur max-md:w-full"
+        className="mt-1 max-h-[60dvh] w-80 overflow-y-auto rounded-xl border border-line shadow-panel bg-panel py-1 backdrop-blur max-md:w-full"
       >
         {results.map((star, i) => (
           <li
@@ -131,19 +131,19 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
             onMouseEnter={() => setActive(i)}
             onClick={() => choose(star)}
             className={`flex cursor-pointer justify-between gap-3 px-3 py-1 ${
-              i === active ? 'bg-slate-800' : ''
+              i === active ? 'bg-raised' : ''
             }`}
           >
             <span className="truncate">
               {withCustomName(star.displayName, customNameOf(starMeta, star.id))}
             </span>
-            <span className="whitespace-nowrap text-slate-400 tabular-nums">
+            <span className="whitespace-nowrap text-muted tabular-nums">
               {spectralCode(star.spectral)} ·{' '}
               {formatValue(distanceFromReference(star, reference), 2, 'ly')}
             </span>
           </li>
         ))}
-        {results.length === 0 && <li className="px-3 py-1 text-slate-400">No matches</li>}
+        {results.length === 0 && <li className="px-3 py-1 text-muted">No matches</li>}
       </ul>
     </div>
   );

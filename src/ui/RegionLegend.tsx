@@ -17,7 +17,7 @@ export function RegionLegend() {
             style={{ background: region.color }}
           />
           {region.name}
-          <span className="text-slate-400 tabular-nums">{region.systemIds.length}</span>
+          <span className="text-muted tabular-nums">{region.systemIds.length}</span>
         </li>
       ))}
     </ul>

@@ -1,5 +1,5 @@
 {
-  "buildDate": "2026-11-05T21:08:56.536Z",
+  "buildDate": "2026-11-06T04:14:39.248Z",
   "radiusLy": 100,
   "sources": [
     {
@@ -16,6 +16,13 @@
       "url": "https://exoplanetarchive.ipac.caltech.edu/TAP/sync",
       "licence": "Public; acknowledgement requested",
       "fetchedAt": "2026-11-04T23:08:42.283Z"
+    },
+    {
+      "name": "NASA Planetary Fact Sheet",
+      "version": "2025-03-18",
+      "url": "https://nssdc.gsfc.nasa.gov/planetary/factsheet/",
+      "licence": "Public; NASA",
+      "fetchedAt": "2026-11-05T00:00:00.000Z"
     },
     {
       "name": "JPL Horizons",
@@ -35,7 +42,7 @@
   "counts": {
     "stars": 4132,
     "systems": 3701,
-    "planets": 541
+    "planets": 549
   },
   "unmatchedHosts": [
     {

@@ -41,6 +41,11 @@ import {
   systemSchema,
   validateCatalogue,
 } from './lib/schema';
+import {
+  SOLAR_FACT_SHEET_FETCHED_AT,
+  SOLAR_FACT_SHEET_URL,
+  SOLAR_FACT_SHEET_VERSION,
+} from './lib/solarPlanets';
 
 const ROOT = resolve(import.meta.dirname, '..');
 const RAW_DIR = join(ROOT, 'data/raw');
@@ -226,6 +231,13 @@ async function main(): Promise<void> {
         url: TAP_ENDPOINT,
         licence: 'Public; acknowledgement requested',
         fetchedAt: exoplanets.fetchedAt,
+      },
+      {
+        name: 'NASA Planetary Fact Sheet',
+        version: SOLAR_FACT_SHEET_VERSION,
+        url: SOLAR_FACT_SHEET_URL,
+        licence: 'Public; NASA',
+        fetchedAt: SOLAR_FACT_SHEET_FETCHED_AT,
       },
       {
         name: 'JPL Horizons',

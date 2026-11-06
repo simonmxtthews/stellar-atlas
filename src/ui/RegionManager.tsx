@@ -22,8 +22,8 @@ export function RegionManager() {
 
   return (
     <section aria-label="Regions" className="mt-3">
-      <h3 className="mb-1 text-xs tracking-wide text-slate-400 uppercase">Regions</h3>
-      <p className="text-xs text-slate-400">
+      <h3 className="mb-1 section-label">Regions</h3>
+      <p className="text-xs text-muted">
         Add the selected systems here, or one at a time from a star's detail panel.
       </p>
       <ul>
@@ -34,7 +34,7 @@ export function RegionManager() {
               aria-label={`Colour of ${region.name}`}
               value={region.color}
               onChange={(event) => updateRegion(region.id, { color: event.target.value }, 'color')}
-              className="h-7 w-8 shrink-0 rounded border border-slate-700 bg-slate-900"
+              className="h-7 w-8 shrink-0 rounded-md border border-line bg-field"
             />
             <input
               type="text"
@@ -43,7 +43,7 @@ export function RegionManager() {
               onChange={(event) => updateRegion(region.id, { name: event.target.value }, 'name')}
               className={INPUT_CLASS}
             />
-            <span className="text-xs text-slate-400 tabular-nums">{region.systemIds.length}</span>
+            <span className="text-xs text-muted tabular-nums">{region.systemIds.length}</span>
             <button
               type="button"
               aria-label={`Add selected systems to ${region.name}`}

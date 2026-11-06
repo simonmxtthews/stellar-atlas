@@ -220,6 +220,8 @@ Seven feature areas; the first five are the brief, the last two serve world-buil
 - Galactic-plane grid with rings every 5 ly, plus **drop lines** from each star to the plane so height above/below is readable. Both toggleable.
 - Camera: orbit, pan, zoom (CameraControls). Double-click a star to fly to it and make it the orbit target; `H` returns to Sol.
 - Radius slider 5–100 ly (default 50). Filters: spectral class, has planets, multiple systems only, tagged only.
+- Timeline bar: a year slider always on the map, shared with the probe panel's, drawing the map in any year up to 100,000 years ahead.
+- Every slider, number field and group of toggles has a small reset to its default. Authored content (names, notes, tag and region colours) has no default to return to.
 - **Reference star**: any star can be set as the reference; all distances in the UI are then measured from it instead of Sol.
 - Hover tooltip: name, class, distance from reference. Touch: tap selects, long-press shows the tooltip, one-finger orbit, pinch zoom, two-finger pan; UI panels collapse into a bottom sheet below 768 px.
 

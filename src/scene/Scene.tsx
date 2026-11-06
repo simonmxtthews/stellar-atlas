@@ -12,13 +12,14 @@ import { Labels, TagBadges } from './Labels';
 import { ProbeOverlay } from './ProbeOverlay';
 import { RangeSpheres } from './RangeSpheres';
 import { Routes } from './Routes';
+import { SPACE_COLOR, WARN_COLOR } from '../lib/palette';
 import { buildStarAttributes } from './starAttributes';
 import { StarField } from './StarField';
 import { StarPointer } from './StarPointer';
 import type { SystemAnchor } from './systemAnchors';
 import { useMapShift, useMapYears } from './useMapShift';
 
-const REFERENCE_COLOR = '#fcd34d';
+const REFERENCE_COLOR = WARN_COLOR;
 const ORIGIN: Position = [0, 0, 0];
 
 export function Scene({
@@ -58,7 +59,7 @@ export function Scene({
   return (
     <>
       {/* Opaque rather than the page showing through, or a snapshot has no background. */}
-      <color attach="background" args={['#000000']} />
+      <color attach="background" args={[SPACE_COLOR]} />
       <CameraRig
         stars={stars}
         positions={attributes.positions}

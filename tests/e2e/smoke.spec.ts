@@ -29,7 +29,10 @@ const PANEL_WIDTH_PX = 256;
 const MODAL_WIDTH_PX = 430;
 const PHONE_WIDTH_PX = 768; // below this, the controls and modal become sheets
 const MAP_TOP_PX = 340; // clear of the toolbar, its banners and a short list of search results
-const PHONE_SHEET_PX = 170;
+const PHONE_MAP_TOP_PX = 290; // no search results reach down here on a phone
+const PHONE_SHEET_PX = 185; // the timeline, on top of the collapsed controls
+const TIMELINE_PX = 70;
+const FUTURE_NOTE_PX = 45; // what the timeline grows by, away from today
 const MIN_STAR_GAP_PX = 20;
 const EMPTY_OFFSET_PX = 16; // a clear spot next to an isolated star
 const MOUSE_PICK_RADIUS_PX = 14;
@@ -80,7 +83,7 @@ async function hideControlsOnPhone(page: Page): Promise<void> {
 
 async function setRadius(page: Page, radiusLy: number): Promise<void> {
   await showControls(page);
-  await page.getByLabel('Radius').fill(String(radiusLy));
+  await page.getByRole('slider', { name: 'Radius' }).fill(String(radiusLy));
   await hideControlsOnPhone(page);
 }
 
@@ -160,14 +163,14 @@ function isolatedStars(page: Page, keep?: (star: Star) => boolean): readonly Sta
   const phone = isPhone(page);
   const left = phone ? 16 + EMPTY_OFFSET_PX : PANEL_WIDTH_PX + EMPTY_OFFSET_PX;
   const right = phone ? width - 16 : width - MODAL_WIDTH_PX;
-  const bottom = height - (phone ? PHONE_SHEET_PX : 40);
+  const bottom = height - (phone ? PHONE_SHEET_PX : TIMELINE_PX);
   const projected = projectedStars(page, keep);
   return projected.filter(
     (a) =>
       a.star.id !== 'hyg:0' &&
       a.x > left &&
       a.x < right &&
-      a.y > MAP_TOP_PX &&
+      a.y > (phone ? PHONE_MAP_TOP_PX : MAP_TOP_PX) &&
       a.y < bottom &&
       projected.every(
         (b) =>
@@ -407,6 +410,28 @@ test('the modal lists a host star: facts, planets, HZ strip and neighbours', asy
   );
 });
 
+test('the Sun lists its own planets, and survives the has-planets filter', async ({ page }) => {
+  await openMap(page);
+  await page.getByRole('combobox', { name: 'Search stars' }).fill('Sol');
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Sol' });
+  const planets = dialog.getByRole('region', { name: 'Planets' });
+  await expect(planets.getByRole('row')).toHaveCount(9);
+  await expect(planets.getByRole('row', { name: /^Earth/ })).toContainText('In zone');
+  await expect(planets.getByRole('link')).toHaveText('NASA Planetary Fact Sheet');
+  await expect(planets.getByText('No confirmed exoplanets')).toHaveCount(0);
+
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Escape');
+  await showControls(page);
+  const before = await visibleStars(page);
+  await page.getByLabel('Has planets').check();
+  expect(await visibleStars(page)).toBeLessThan(before);
+  await page.getByRole('combobox', { name: 'Search stars' }).fill('Sol');
+  await page.keyboard.press('Enter');
+  await expect(dialog).toBeVisible();
+});
+
 test('companions get a tab each, and Proxima Centauri shows its planets', async ({ page }) => {
   await openMap(page);
   await setRadius(page, 5);
@@ -533,7 +558,9 @@ test('search: a hit outside the filters widens them so the star shows', async ({
 
   await expect(page.getByRole('dialog', { name: far.displayName })).toBeVisible();
   await expect(page.getByLabel('K', { exact: true })).toBeChecked();
-  await expect(page.getByLabel('Radius')).toHaveValue(String(Math.ceil(far.distLy)));
+  await expect(page.getByRole('slider', { name: 'Radius' })).toHaveValue(
+    String(Math.ceil(far.distLy)),
+  );
 });
 
 // Clear of the toolbar, whose hover state shows in screenshots, and of any star's tooltip.
@@ -585,7 +612,7 @@ test('route mode: clicks add waypoints, Backspace and Esc work, and clicks do no
   await page.keyboard.press('r');
   await expect(draft).toContainText('Click systems');
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Routes' }).click();
+  await page.getByRole('button', { name: 'Routes', exact: true }).click();
   await expect(page.getByText('No routes yet')).toBeVisible();
 });
 
@@ -596,10 +623,10 @@ test('a 3-stop route draws, shows its distances, and persists through a reload',
   const before = await canvasShot(page);
   const [first, second, third] = await buildRoute(page);
   if (!first || !second || !third) throw new Error('Not enough stops');
-  await page.getByRole('button', { name: 'Routes' }).click(); // close, to compare just the map
+  await page.getByRole('button', { name: 'Routes', exact: true }).click(); // close, to compare just the map
   await restPointer(page);
   await expectChanged(page, await canvasShot(page), before);
-  await page.getByRole('button', { name: 'Routes' }).click();
+  await page.getByRole('button', { name: 'Routes', exact: true }).click();
 
   const legA = lightYears(first.star, second.star);
   const legB = lightYears(second.star, third.star);
@@ -610,16 +637,16 @@ test('a 3-stop route draws, shows its distances, and persists through a reload',
   await expect(page.getByTestId('leg-distance')).toHaveCount(2);
 
   await page.getByLabel('Name', { exact: true }).fill('The Long Haul');
-  await page.getByLabel('Kind').selectOption('military');
-  await page.getByLabel('Dashed').check();
+  await page.getByRole('combobox', { name: 'Kind' }).selectOption('military');
+  await page.getByRole('checkbox', { name: 'Dashed' }).check();
 
   // Without waiting out the autosave debounce: leaving the page flushes it.
   await page.reload();
   await expect(page.getByTestId('visible-count')).toBeVisible();
-  await page.getByRole('button', { name: 'Routes' }).click();
+  await page.getByRole('button', { name: 'Routes', exact: true }).click();
   await page.getByRole('button', { name: /The Long Haul/ }).click();
-  await expect(page.getByLabel('Kind')).toHaveValue('military');
-  await expect(page.getByLabel('Dashed')).toBeChecked();
+  await expect(page.getByRole('combobox', { name: 'Kind' })).toHaveValue('military');
+  await expect(page.getByRole('checkbox', { name: 'Dashed' })).toBeChecked();
   await expect(page.getByTestId('leg-distance')).toHaveCount(2);
 });
 
@@ -631,7 +658,7 @@ test('a hidden route leaves the map, and a deleted one can be undone', async ({ 
   await restPointer(page);
   const before = await page.screenshot(map);
   await buildRoute(page);
-  const panelButton = page.getByRole('button', { name: 'Routes' });
+  const panelButton = page.getByRole('button', { name: 'Routes', exact: true });
   await panelButton.click();
   await restPointer(page);
   await page.waitForTimeout(300);
@@ -677,7 +704,7 @@ test('the ruler measures two stars and saves nothing', async ({ page }) => {
   await expect(readout).toHaveCount(0);
   await page.waitForTimeout(SETTLE_MS);
   await expectSame(page, await canvasShot(page), before);
-  await page.getByRole('button', { name: 'Routes' }).click();
+  await page.getByRole('button', { name: 'Routes', exact: true }).click();
   await expect(page.getByText('No routes yet')).toBeVisible();
 });
 
@@ -738,7 +765,7 @@ test('custom names, notes and tags: halos, typing stays typing, search and reloa
 test('export then import round-trips identically', async ({ page }, testInfo) => {
   await openMap(page);
   await buildRoute(page);
-  await page.getByRole('button', { name: 'Routes' }).click(); // it covers the stars
+  await page.getByRole('button', { name: 'Routes', exact: true }).click(); // it covers the stars
   const { x, y } = threeStops(page)[1];
   await page.mouse.click(x, y);
   await page.getByRole('dialog').getByLabel('Custom name').fill('Haven');
@@ -812,35 +839,38 @@ test('the drive model updates every travel time, and persists', async ({ page })
   const time = page.getByTestId('route-time');
   await expect(time).toContainText('jump');
 
-  await page.getByRole('button', { name: 'Drive' }).click();
+  await page.getByRole('button', { name: 'Drive', exact: true }).click();
   const calculator = page.getByTestId('calculator-result');
   await expect(calculator).toContainText('4.37 ly: at least 1 jump · 7.0 d');
-  await page.getByLabel('Days per jump').fill('14');
+  await page.getByRole('spinbutton', { name: 'Days per jump' }).fill('14');
   await expect(calculator).toContainText('1 jump · 14 d');
 
-  await page.getByLabel('Drive model').selectOption('sublight');
-  await page.getByLabel('Constant acceleration').check();
+  await page.getByRole('combobox', { name: 'Drive model' }).selectOption('sublight');
+  await page.getByRole('checkbox', { name: /Constant acceleration/ }).check();
   await expect(calculator).toContainText('ship 3.58 yr · Earth 6.00 yr');
 
-  await page.getByLabel('Drive model').selectOption('ftl-speed');
-  await page.getByLabel('Speed (multiple of c)').fill('');
-  await expect(page.getByLabel('Speed (multiple of c)')).toHaveAttribute('aria-invalid', 'true');
-  await page.getByLabel('Speed (multiple of c)').fill('100');
+  await page.getByRole('combobox', { name: 'Drive model' }).selectOption('ftl-speed');
+  await page.getByRole('spinbutton', { name: 'Speed (multiple of c)' }).fill('');
+  await expect(page.getByRole('spinbutton', { name: 'Speed (multiple of c)' })).toHaveAttribute(
+    'aria-invalid',
+    'true',
+  );
+  await page.getByRole('spinbutton', { name: 'Speed (multiple of c)' }).fill('100');
   await expect(calculator).toContainText('4.37 ly: 16 d');
 
-  await page.getByRole('button', { name: 'Routes' }).click();
+  await page.getByRole('button', { name: 'Routes', exact: true }).click();
   await expect(time).not.toContainText('jump');
   await expect(page.getByTestId('leg-distance').first()).not.toContainText('jump');
 
   await page.reload();
   await expect(page.getByTestId('visible-count')).toBeVisible();
-  await page.getByRole('button', { name: 'Drive' }).click();
-  await expect(page.getByLabel('Speed (multiple of c)')).toHaveValue('100');
+  await page.getByRole('button', { name: 'Drive', exact: true }).click();
+  await expect(page.getByRole('spinbutton', { name: 'Speed (multiple of c)' })).toHaveValue('100');
 });
 
 test('the jump network draws in component colours and follows the max jump', async ({ page }) => {
   await openMap(page);
-  await page.getByRole('button', { name: 'Network' }).click();
+  await page.getByRole('button', { name: 'Network', exact: true }).click();
   const off = await canvasShot(page);
   await page.getByLabel('Show jump network').check();
   await expectChanged(page, await canvasShot(page), off);
@@ -848,9 +878,9 @@ test('the jump network draws in component colours and follows the max jump', asy
   await expect(stats).toContainText('within 10 ly');
   const atTen = await stats.textContent();
 
-  await page.getByRole('button', { name: 'Drive' }).click();
-  await page.getByLabel(/Max jump/).fill('5');
-  await page.getByRole('button', { name: 'Network' }).click();
+  await page.getByRole('button', { name: 'Drive', exact: true }).click();
+  await page.getByRole('spinbutton', { name: /Max jump/ }).fill('5');
+  await page.getByRole('button', { name: 'Network', exact: true }).click();
   await expect(stats).toContainText('within 5 ly');
   expect(await stats.textContent()).not.toBe(atTen);
   await expect(
@@ -862,11 +892,11 @@ test('hubs rank in a worker, and an auto-route previews then saves', async ({ pa
   const workers: string[] = [];
   page.on('worker', (worker) => workers.push(worker.url()));
   await openMap(page);
-  await page.getByRole('button', { name: 'Network' }).click();
+  await page.getByRole('button', { name: 'Network', exact: true }).click();
   await page.getByRole('button', { name: 'Rank hubs' }).click();
   await expect(page.getByRole('list', { name: 'Hubs' }).getByRole('listitem')).toHaveCount(10);
   expect(workers.filter((url) => url.includes('hubs.worker'))).toHaveLength(1);
-  await page.getByRole('button', { name: 'Network' }).click();
+  await page.getByRole('button', { name: 'Network', exact: true }).click();
 
   const [first, second] = threeStops(page);
   await page.keyboard.press('a');
@@ -935,7 +965,7 @@ test('a reference star moves the distances, and a range sphere lists what is ins
   await expect(siriusModal.getByText(`Distance from ${pick.star.displayName}`)).toHaveCount(0);
 
   await siriusModal.getByRole('button', { name: 'Show range sphere' }).click();
-  await siriusModal.getByLabel('Range sphere radius').fill('5');
+  await siriusModal.getByRole('slider', { name: 'Range sphere radius' }).fill('5');
   const inside = systems.filter(
     (system) =>
       system.id !== siriusSystem.id &&
@@ -955,7 +985,7 @@ test('probe trajectories, the year slider, the approach table and the pulsar map
   page,
 }) => {
   await openMap(page);
-  await page.getByRole('button', { name: 'Probes' }).click();
+  await page.getByRole('button', { name: 'Probes', exact: true }).click();
   const panel = page.getByRole('complementary', { name: 'Probes panel' });
   const off = await canvasShot(page);
   await panel.getByLabel('Show probe trajectories').check();
@@ -964,7 +994,7 @@ test('probe trajectories, the year slider, the approach table and the pulsar map
 
   const voyager = page.getByTestId('probe-row').filter({ hasText: 'Voyager 1' });
   await expect(voyager).toContainText('0.000 ly');
-  await panel.getByLabel('Map year').fill('100000');
+  await panel.getByRole('slider', { name: 'Probe year' }).fill('100000');
   // 16.9 km/s for 100,000 years.
   await expect(voyager).toContainText('5.64');
   await expect(page.getByTestId('approach-note')).toContainText('catalogue velocity');
@@ -974,7 +1004,7 @@ test('probe trajectories, the year slider, the approach table and the pulsar map
   await expect(nearest).toContainText('GJ 445');
   await expect(nearest).not.toContainText("Barnard's Star");
 
-  await panel.getByLabel('Approach distance').fill('10');
+  await panel.getByRole('slider', { name: 'Approach distance' }).fill('10');
   const table = panel.getByRole('region', { name: 'Voyager 1 closest approaches' });
   await expect(table.getByRole('row').nth(1)).toBeVisible();
 
@@ -1095,7 +1125,7 @@ test('the PNG snapshot is the map, on an opaque background', async ({ page }, te
 
 test('the About panel credits the data and gives its build date', async ({ page }) => {
   await openMap(page);
-  await page.getByRole('button', { name: 'About' }).click();
+  await page.getByRole('button', { name: 'About', exact: true }).click();
   const panel = page.getByRole('complementary', { name: 'About panel' });
   await expect(panel.getByTestId('attribution')).toContainText('HYG Database');
   await expect(panel.getByTestId('attribution')).toContainText('NASA Exoplanet Archive');
@@ -1120,9 +1150,9 @@ test('the year slider moves the map, while the figures and filters stay as of to
   const today = await canvasShot(page);
   await expect(banner).toHaveCount(0);
 
-  await page.getByRole('button', { name: 'Probes' }).click();
-  await page.getByLabel('Map year').fill(String(yearsAhead));
-  await page.getByRole('button', { name: 'Probes' }).click();
+  await page.getByRole('button', { name: 'Probes', exact: true }).click();
+  await page.getByRole('slider', { name: 'Map year' }).fill(String(yearsAhead));
+  await page.getByRole('button', { name: 'Probes', exact: true }).click();
   const year = new Date().getFullYear() + yearsAhead;
   await expect(banner).toHaveText(`Showing AD ${year.toLocaleString('en')}`);
   await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Sol');
@@ -1152,7 +1182,7 @@ test('the year slider moves the map, while the figures and filters stay as of to
       a.x > (isPhone(page) ? 32 : PANEL_WIDTH_PX) &&
       a.x < width - (isPhone(page) ? 16 : MODAL_WIDTH_PX) &&
       a.y > MAP_TOP_PX + 100 &&
-      a.y < height - (isPhone(page) ? PHONE_SHEET_PX : 40) &&
+      a.y < height - (isPhone(page) ? PHONE_SHEET_PX : TIMELINE_PX) - FUTURE_NOTE_PX &&
       visibleNow.every((b) => b === a || Math.hypot(a.x - b.x, a.y - b.y) > MIN_STAR_GAP_PX),
   );
   if (!pick) throw new Error('No isolated moved star on screen');
@@ -1165,7 +1195,7 @@ test('the year slider moves the map, while the figures and filters stay as of to
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: 'Back to today' }).click();
+  await page.getByRole('button', { name: 'Reset map year to today' }).click();
   await expect(banner).toHaveCount(0);
   await restPointer(page);
   await page.waitForTimeout(SETTLE_MS);
@@ -1177,7 +1207,7 @@ test('a route and a selection keep to their moving stars, and the camera to its 
 }) => {
   await openMap(page);
   await buildRoute(page);
-  const routes = page.getByRole('button', { name: 'Routes' });
+  const routes = page.getByRole('button', { name: 'Routes', exact: true });
   const legs = page.getByTestId('leg-distance');
   const todaysLegs = await legs.allTextContents();
   await routes.click();
@@ -1188,9 +1218,9 @@ test('a route and a selection keep to their moving stars, and the camera to its 
   await page.keyboard.press('Escape');
   await page.waitForTimeout(SETTLE_MS * 2);
 
-  await page.getByRole('button', { name: 'Probes' }).click();
-  await page.getByLabel('Map year').fill('60000');
-  await page.getByRole('button', { name: 'Routes' }).click();
+  await page.getByRole('button', { name: 'Probes', exact: true }).click();
+  await page.getByRole('slider', { name: 'Map year' }).fill('60000');
+  await page.getByRole('button', { name: 'Routes', exact: true }).click();
   await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Vega');
   await expect(page.getByTestId('map-year')).toBeVisible();
   expect(await legs.allTextContents()).toEqual(todaysLegs);
@@ -1205,6 +1235,163 @@ test('a route and a selection keep to their moving stars, and the camera to its 
   await page.mouse.up();
   await page.waitForTimeout(SETTLE_MS);
   await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Vega');
+});
+
+test('the timeline is always on hand, and both year sliders stay in step', async ({ page }) => {
+  await openMap(page);
+  const timeline = page.getByRole('group', { name: 'Timeline' });
+  await expect(timeline).toBeVisible();
+  const thisYear = new Date().getFullYear();
+  const reset = page.getByRole('button', { name: 'Reset map year to today' });
+  await expect(reset).toBeDisabled();
+
+  const slider = timeline.getByRole('slider', { name: 'Map year' });
+  const before = await slider.boundingBox();
+  await slider.fill('20000');
+  await expect(timeline.getByTestId('global-year')).toHaveText(String(thisYear + 20_000));
+  await expect(page.getByTestId('map-year')).toBeVisible();
+  // The note appears above it, or the slider would jump out from under a drag.
+  expect((await slider.boundingBox())?.y).toBe(before?.y);
+
+  await page.getByRole('button', { name: 'Probes', exact: true }).click();
+  const panel = page.getByRole('complementary', { name: 'Probes panel' });
+  const inPanel = panel.getByRole('slider', { name: 'Probe year' });
+  await expect(inPanel).toHaveValue('20000');
+  await inPanel.fill('30000');
+  await expect(timeline.getByRole('slider', { name: 'Map year' })).toHaveValue('30000');
+
+  await reset.click();
+  await expect(inPanel).toHaveValue('0');
+  await expect(page.getByTestId('map-year')).toHaveCount(0);
+  await expect(reset).toBeDisabled();
+  await page.getByRole('button', { name: 'Probes', exact: true }).click();
+
+  // On a wide screen it makes way for the star details, rather than going behind them.
+  if (viewportOf(page).width >= 1024) {
+    await page.getByRole('combobox', { name: 'Search stars' }).fill('Vega');
+    await page.keyboard.press('Enter');
+    const details = await page.getByRole('dialog', { name: 'Vega' }).boundingBox();
+    const bar = await timeline.boundingBox();
+    if (!details || !bar) throw new Error('Nothing to compare');
+    expect(bar.x + bar.width).toBeLessThanOrEqual(details.x);
+  }
+});
+
+test('every setting resets to its default, and a reset of the world can be undone', async ({
+  page,
+}) => {
+  test.slow(); // it walks every panel
+  await openMap(page);
+  const resetOf = (name: string | RegExp) => page.getByRole('button', { name });
+
+  // Map controls.
+  await showControls(page);
+  const radius = page.getByRole('slider', { name: 'Radius' });
+  await expect(resetOf(/^Reset radius/)).toBeDisabled();
+  await radius.fill('20');
+  await resetOf(/^Reset radius/).click();
+  await expect(radius).toHaveValue('50');
+  await page.getByLabel('Galactic grid').uncheck();
+  await resetOf(/^Reset overlays/).click();
+  await expect(page.getByLabel('Galactic grid')).toBeChecked();
+  await page.getByLabel('M', { exact: true }).uncheck();
+  await page.getByLabel('K', { exact: true }).uncheck();
+  await resetOf(/^Reset spectral classes/).click();
+  await expect(page.getByLabel('M', { exact: true })).toBeChecked();
+  await expect(page.getByLabel('K', { exact: true })).toBeChecked();
+  await page.getByLabel('Has planets').check();
+  await page.getByLabel('Multiple systems only').check();
+  await resetOf(/^Reset system filters/).click();
+  await expect(page.getByLabel('Has planets')).not.toBeChecked();
+  await expect(page.getByLabel('Multiple systems only')).not.toBeChecked();
+  await hideControlsOnPhone(page);
+
+  // Drive panel: each field, then all of it, and undo brings a reset back.
+  await page.getByRole('button', { name: 'Drive', exact: true }).click();
+  const maxJump = page.getByRole('spinbutton', { name: /Max jump/ });
+  await maxJump.fill('25');
+  await resetOf(/^Reset Max jump/).click();
+  await expect(maxJump).toHaveValue('10');
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(maxJump).toHaveValue('25');
+  // A reset leaves the keyboard working, even though its button has just gone inactive.
+  await resetOf(/^Reset Max jump/).click();
+  await page.keyboard.press('h');
+  await page.keyboard.press('r');
+  await expect(page.getByTestId('route-draft')).toBeVisible();
+  await page.keyboard.press('Escape');
+  const days = page.getByRole('spinbutton', { name: 'Days per jump' });
+  await days.fill('14');
+  await resetOf(/^Reset Days per jump/).click();
+  await expect(days).toHaveValue('7');
+  const distance = page.getByRole('spinbutton', { name: 'Distance (ly)' });
+  await distance.fill('20');
+  await resetOf(/^Reset Distance/).click();
+  await expect(distance).toHaveValue('4.37');
+  const model = page.getByRole('combobox', { name: 'Drive model' });
+  await model.selectOption('sublight');
+  await page.getByRole('checkbox', { name: /Constant acceleration/ }).check();
+  const acceleration = page.getByRole('spinbutton', { name: 'Acceleration (g)' });
+  await acceleration.fill('3');
+  await resetOf(/^Reset Acceleration/).click();
+  await expect(acceleration).toHaveValue('1');
+  await resetOf(/^Reset constant acceleration/).click();
+  await expect(page.getByRole('checkbox', { name: /Constant acceleration/ })).not.toBeChecked();
+  const coasting = page.getByRole('spinbutton', { name: /Coasting speed/ });
+  await coasting.fill('0.5');
+  await resetOf(/^Reset Coasting speed/).click();
+  await expect(coasting).toHaveValue('0.1');
+  await model.selectOption('ftl-speed');
+  const speed = page.getByRole('spinbutton', { name: 'Speed (multiple of c)' });
+  await speed.fill('200');
+  await resetOf(/^Reset Speed/).click();
+  await expect(speed).toHaveValue('50');
+  await resetOf(/^Reset the whole drive/).click();
+  await expect(model).toHaveValue('jump');
+  await expect(maxJump).toHaveValue('10');
+
+  // Network and probe panels.
+  await page.getByRole('button', { name: 'Network', exact: true }).click();
+  await page.getByLabel('Show jump network').check();
+  await resetOf(/^Reset jump network display/).click();
+  await expect(page.getByLabel('Show jump network')).not.toBeChecked();
+  await page.getByRole('button', { name: 'Probes', exact: true }).click();
+  await page.getByLabel('Show probe trajectories').check();
+  await page.getByLabel('Show pulsar map').check();
+  await resetOf(/^Reset probe and pulsar display/).click();
+  await expect(page.getByLabel('Show probe trajectories')).not.toBeChecked();
+  await expect(page.getByLabel('Show pulsar map')).not.toBeChecked();
+  const approach = page.getByRole('slider', { name: 'Approach distance' });
+  await approach.fill('8');
+  await resetOf(/^Reset approach distance/).click();
+  await expect(approach).toHaveValue('3');
+  await page.getByRole('button', { name: 'Probes', exact: true }).click();
+
+  // A route's style.
+  await buildRoute(page);
+  const kind = page.getByRole('combobox', { name: 'Kind' });
+  await kind.selectOption('military');
+  await resetOf(/^Reset kind/).click();
+  await expect(kind).toHaveValue('trade');
+  await page.getByRole('checkbox', { name: 'Dashed' }).check();
+  await resetOf(/^Reset dashes/).click();
+  await expect(page.getByRole('checkbox', { name: 'Dashed' })).not.toBeChecked();
+  const width = page.getByRole('slider', { name: 'Width' });
+  await width.fill('5');
+  await resetOf(/^Reset width/).click();
+  await expect(width).toHaveValue('2');
+  await page.getByRole('button', { name: 'Routes', exact: true }).click();
+
+  // The range sphere, in the modal.
+  await page.keyboard.press('/');
+  await page.keyboard.type('sirius');
+  await page.keyboard.press('Enter');
+  const modal = page.getByRole('dialog', { name: 'Sirius' });
+  await modal.getByRole('button', { name: 'Show range sphere' }).click();
+  const sphere = modal.getByRole('slider', { name: 'Range sphere radius' });
+  await sphere.fill('30');
+  await modal.getByRole('button', { name: /^Reset range sphere radius/ }).click();
+  await expect(sphere).toHaveValue('10');
 });
 
 test.describe('touch', () => {

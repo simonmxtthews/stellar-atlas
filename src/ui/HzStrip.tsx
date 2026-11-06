@@ -44,7 +44,7 @@ export function HzStrip({ star, planets }: HzStripProps) {
         x2={WIDTH - PADDING_X}
         y1={AXIS_Y}
         y2={AXIS_Y}
-        className="stroke-slate-600"
+        className="stroke-line-strong"
       />
       {star.hzAu && (
         <rect
@@ -54,22 +54,22 @@ export function HzStrip({ star, planets }: HzStripProps) {
           y={AXIS_Y - 7}
           height={14}
           rx={2}
-          className="fill-emerald-500/35"
+          className="fill-habitable/35"
         />
       )}
       {orbiting.map(({ planet, au }) => (
-        <circle key={planet.id} cx={toX(au)} cy={AXIS_Y} r={3.5} className="fill-sky-300">
+        <circle key={planet.id} cx={toX(au)} cy={AXIS_Y} r={3.5} className="fill-accent">
           <title>{`${planet.name}: ${formatAu(au)}`}</title>
         </circle>
       ))}
-      <text x={PADDING_X} y={HEIGHT - 4} className="fill-slate-400 text-[10px]">
+      <text x={PADDING_X} y={HEIGHT - 4} className="fill-muted text-[10px]">
         {formatAu(scale.minAu)}
       </text>
       <text
         x={WIDTH - PADDING_X}
         y={HEIGHT - 4}
         textAnchor="end"
-        className="fill-slate-400 text-[10px]"
+        className="fill-muted text-[10px]"
       >
         {formatAu(scale.maxAu)}
       </text>

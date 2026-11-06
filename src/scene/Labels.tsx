@@ -8,6 +8,7 @@ import { chooseLabels, LabelTier, labelStyle, labelText, type LabelCandidate } f
 import { galacticToScene } from '../lib/coords';
 import { distanceLy, routeLegs, type RouteLeg } from '../lib/routes';
 import { formatTravelTime, legTravelTime } from '../lib/travel';
+import { INK_COLOR, SPACE_COLOR } from '../lib/palette';
 import { formatValue } from '../lib/starFacts';
 import {
   routeEndpointIds,
@@ -28,7 +29,7 @@ import type { SystemAnchor } from './systemAnchors';
 import { useMapShift, type MapShift } from './useMapShift';
 
 const BADGE_PX = 13;
-const BADGE_COLOR = '#f8fafc'; // a tag colour would vanish against its own halo
+const BADGE_COLOR = INK_COLOR; // a tag colour would vanish against its own halo
 const BADGE_OFFSET_EM: readonly [number, number] = [1, 1];
 
 function tierOf(
@@ -88,7 +89,7 @@ export const ScreenText = memo(function ScreenText({
         material={material}
         color={color}
         outlineWidth={0.06}
-        outlineColor="#020617"
+        outlineColor={SPACE_COLOR}
         renderOrder={3}
       >
         {text}

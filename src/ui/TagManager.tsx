@@ -23,7 +23,7 @@ export function TagManager() {
 
   return (
     <section aria-label="Tags" className="mt-3">
-      <h3 className="mb-1 text-xs tracking-wide text-slate-400 uppercase">Tags</h3>
+      <h3 className="mb-1 section-label">Tags</h3>
       <ul>
         {tags.map((tag) => (
           <li key={tag.id} className="flex items-center gap-1 py-0.5">
@@ -32,7 +32,7 @@ export function TagManager() {
               aria-label={`Colour of ${tag.label}`}
               value={tag.color}
               onChange={(event) => updateTag(tag.id, { color: event.target.value }, 'color')}
-              className="h-7 w-8 shrink-0 rounded border border-slate-700 bg-slate-900"
+              className="h-7 w-8 shrink-0 rounded-md border border-line bg-field"
             />
             <input
               type="text"
@@ -41,7 +41,7 @@ export function TagManager() {
               onChange={(event) => updateTag(tag.id, { label: event.target.value }, 'label')}
               className={INPUT_CLASS}
             />
-            <span className="text-xs text-slate-400 tabular-nums">{uses(tag.id)}</span>
+            <span className="text-xs text-muted tabular-nums">{uses(tag.id)}</span>
             <button
               type="button"
               aria-label={`Delete ${tag.label}`}

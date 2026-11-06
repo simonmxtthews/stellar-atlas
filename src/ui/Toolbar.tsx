@@ -7,8 +7,7 @@ import type { Catalogue } from '../store/catalogue';
 import { useUi, type Panel } from '../store/ui';
 import { useWorld } from '../store/world';
 import { AboutPanel } from './AboutPanel';
-import { BUTTON_CLASS } from './controlStyles';
-import { MapYearBanner } from './MapYearBanner';
+import { BUTTON_CLASS, PANEL_CLASS, QUIET_BUTTON_CLASS } from './controlStyles';
 import type { StarSystem } from '../types/catalogue';
 import { NetworkPanel } from './NetworkPanel';
 import { ProbesPanel } from './ProbesPanel';
@@ -17,8 +16,7 @@ import { TravelCalculator } from './TravelCalculator';
 import { autoRoutePath, useAutoRoutePath } from './useAutoRoute';
 import { WorldPanel } from './WorldPanel';
 
-const SURFACE_CLASS =
-  'rounded-lg border border-slate-700/60 bg-slate-950/90 p-3 text-sm text-slate-200 backdrop-blur';
+const SURFACE_CLASS = `${PANEL_CLASS} p-3`;
 
 const PANELS: readonly (readonly [Panel, string, string])[] = [
   ['routes', 'Routes', 'Route panel'],
@@ -57,7 +55,7 @@ function RouteBanner({ catalogue }: { readonly catalogue: Catalogue }) {
       <p data-testid="route-draft" className="text-xs">
         {names.length === 0 ? 'Click systems in order to add waypoints.' : names.join(' → ')}
       </p>
-      <p className="mt-1 text-xs text-slate-400 tabular-nums">
+      <p className="mt-1 text-xs text-muted tabular-nums">
         {routeDraft.length} waypoint{routeDraft.length === 1 ? '' : 's'} ·{' '}
         {formatValue(routeLengthLy(legs), 2, 'ly')}
         {legs.length > 0 &&
@@ -139,7 +137,7 @@ function AutoRouteBanner({
                 : path.map((id) => catalogue.systemsById.get(id)?.name ?? id).join(' → ')}
       </p>
       {path && (
-        <p data-testid="auto-route-total" className="mt-1 text-xs text-slate-400 tabular-nums">
+        <p data-testid="auto-route-total" className="mt-1 text-xs text-muted tabular-nums">
           {formatValue(routeLengthLy(legs), 2, 'ly')} ·{' '}
           {formatTravelTime(routeTravelTime(drive, catalogue.systems, legs))}
         </p>
@@ -220,13 +218,17 @@ export function Toolbar({
   }, [catalogue, visibleSystems]);
 
   return (
-    <div className="absolute top-2 left-[16.5rem] z-5 flex w-96 flex-col gap-2 max-md:inset-x-3 max-md:top-14 max-md:w-auto">
-      <div role="toolbar" aria-label="World tools" className="flex flex-wrap gap-1">
+    <div className="absolute top-3 left-[16.5rem] z-5 flex max-h-[calc(100dvh-7.5rem)] w-96 flex-col gap-2 max-md:inset-x-3 max-md:top-14 max-md:max-h-[calc(100dvh-16rem)] max-md:w-auto">
+      <div
+        role="toolbar"
+        aria-label="World tools"
+        className={`${PANEL_CLASS} flex shrink-0 flex-wrap gap-0.5 p-1`}
+      >
         <button
           type="button"
           aria-pressed={tool === 'route'}
           onClick={() => (tool === 'route' ? endTool() : startRoute())}
-          className={`${BUTTON_CLASS} bg-slate-950/85`}
+          className={QUIET_BUTTON_CLASS}
         >
           Route (R)
         </button>
@@ -234,7 +236,7 @@ export function Toolbar({
           type="button"
           aria-pressed={tool === 'ruler'}
           onClick={() => (tool === 'ruler' ? endTool() : startRuler())}
-          className={`${BUTTON_CLASS} bg-slate-950/85`}
+          className={QUIET_BUTTON_CLASS}
         >
           Ruler (M)
         </button>
@@ -242,39 +244,31 @@ export function Toolbar({
           type="button"
           aria-pressed={tool === 'autoroute'}
           onClick={() => (tool === 'autoroute' ? endTool() : startAutoRoute())}
-          className={`${BUTTON_CLASS} bg-slate-950/85`}
+          className={QUIET_BUTTON_CLASS}
         >
           Auto-route (A)
         </button>
+        <span className="ml-auto flex gap-0.5">
+          <button type="button" disabled={!canUndo} onClick={undo} className={QUIET_BUTTON_CLASS}>
+            Undo
+          </button>
+          <button type="button" disabled={!canRedo} onClick={redo} className={QUIET_BUTTON_CLASS}>
+            Redo
+          </button>
+        </span>
+        <span aria-hidden className="basis-full border-t border-hairline" />
         {PANELS.map(([id, label]) => (
           <button
             key={id}
             type="button"
             aria-pressed={panel === id}
             onClick={() => togglePanel(id)}
-            className={`${BUTTON_CLASS} bg-slate-950/85`}
+            className={QUIET_BUTTON_CLASS}
           >
             {label}
           </button>
         ))}
-        <button
-          type="button"
-          disabled={!canUndo}
-          onClick={undo}
-          className={`${BUTTON_CLASS} bg-slate-950/85`}
-        >
-          Undo
-        </button>
-        <button
-          type="button"
-          disabled={!canRedo}
-          onClick={redo}
-          className={`${BUTTON_CLASS} bg-slate-950/85`}
-        >
-          Redo
-        </button>
       </div>
-      <MapYearBanner surfaceClass={SURFACE_CLASS} />
       {tool === 'route' && <RouteBanner catalogue={catalogue} />}
       {tool === 'ruler' && <RulerBanner catalogue={catalogue} />}
       {tool === 'autoroute' && (
@@ -283,7 +277,7 @@ export function Toolbar({
       {panel && (
         <aside
           aria-label={PANELS.find(([id]) => id === panel)?.[2]}
-          className={`${SURFACE_CLASS} max-h-[calc(100dvh-5rem)] overflow-y-auto max-md:max-h-[50dvh]`}
+          className={`${SURFACE_CLASS} min-h-0 overflow-y-auto max-md:max-h-[50dvh]`}
         >
           {panel === 'routes' && <RoutePanel catalogue={catalogue} />}
           {panel === 'world' && <WorldPanel catalogue={catalogue} />}

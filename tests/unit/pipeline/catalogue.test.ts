@@ -71,6 +71,23 @@ describe('generated catalogue', () => {
     expect(system?.planetCount).toBeGreaterThan(0);
   });
 
+  it('gives the Sun its eight planets, from the Sun outwards, with only Earth in the zone', () => {
+    const ours = starNamed('Sol').planetIds.flatMap((id) => planets.find((p) => p.id === id) ?? []);
+    expect(ours.map((planet) => planet.name)).toEqual([
+      'Mercury',
+      'Venus',
+      'Earth',
+      'Mars',
+      'Jupiter',
+      'Saturn',
+      'Uranus',
+      'Neptune',
+    ]);
+    expect(ours.filter((planet) => planet.inHabitableZone).map((planet) => planet.name)).toEqual([
+      'Earth',
+    ]);
+  });
+
   it('resolves well-known planet hosts', () => {
     expect(hostOf('Proxima Cen b')?.displayName).toBe('Proxima Centauri');
     // The archive retires individual planets, so these only require the host to have some.

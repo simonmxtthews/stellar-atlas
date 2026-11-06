@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { persist, type PersistStorage, type StorageValue } from 'zustand/middleware';
 import { mergeWorlds, parseWorld, remapWorldIds } from '../lib/io';
 import { movedWaypoints, withoutWaypoint } from '../lib/routes';
+import { DEFAULT_DRIVE } from '../lib/travel';
 import type { DriveModel, Region, Route, StarMeta, Tag, World } from '../types/world';
 
 const STORAGE_KEY = 'stellar-atlas-worlds';
@@ -11,7 +12,9 @@ const SAVE_DEBOUNCE_MS = 1000;
 const HISTORY_LIMIT = 100;
 const COALESCE_MS = 1000;
 
-export const PALETTE = ['#38bdf8', '#f472b6', '#a3e635', '#fb923c', '#c084fc', '#facc15'] as const;
+export const ROUTE_DEFAULTS = { kind: 'trade', dashed: false, width: 2 } as const;
+
+export const PALETTE = ['#8fb3ff', '#f08fb5', '#a9d66b', '#f2a065', '#b79cf2', '#ecc95a'] as const;
 
 const newId = (prefix: string) => `${prefix}:${crypto.randomUUID()}`;
 const nextColor = (count: number) => PALETTE[count % PALETTE.length] ?? PALETTE[0];
@@ -20,7 +23,7 @@ export function newWorld(name: string): World {
   return {
     schemaVersion: 1,
     name,
-    drive: { type: 'jump', maxJumpLy: 10, daysPerJump: 7 },
+    drive: DEFAULT_DRIVE,
     tags: [],
     starMeta: {},
     routes: [],
@@ -79,12 +82,14 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined;
 async function flushSave(): Promise<void> {
   clearTimeout(saveTimer);
   const value = pendingSave;
-  pendingSave = null;
   if (!value) return;
   try {
     await idbSet(STORAGE_KEY, value);
+    // Pending until now: leaving the page mid-write aborts the write, so it must still get parked.
+    if (pendingSave === value) pendingSave = null;
     localStorage.removeItem(UNLOAD_KEY);
   } catch (error) {
+    if (pendingSave === value) pendingSave = null;
     console.error('Could not save the world', error);
   }
 }
@@ -273,10 +278,8 @@ export const useWorld = create<WorldState>()(
               {
                 id,
                 waypoints,
-                kind: 'trade',
+                ...ROUTE_DEFAULTS,
                 color: nextColor(world.routes.length),
-                dashed: false,
-                width: 2,
               },
             ],
           }));

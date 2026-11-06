@@ -9,6 +9,14 @@ const LIGHT_SPEED_M_S = 299_792_458;
 // One standard gravity in light-years per year squared, where c = 1 ly/yr.
 const LY_PER_YEAR2_PER_G = (9.80665 * SECONDS_PER_YEAR) / LIGHT_SPEED_M_S;
 
+export const DRIVE_DEFAULTS = {
+  jump: { type: 'jump', maxJumpLy: 10, daysPerJump: 7 },
+  'ftl-speed': { type: 'ftl-speed', multipleOfC: 50 },
+  sublight: { type: 'sublight', fractionC: 0.1 },
+} as const satisfies Readonly<Record<DriveModel['type'], DriveModel>>;
+export const DEFAULT_DRIVE = DRIVE_DEFAULTS.jump; // the book's FTL model
+export const DEFAULT_ACCEL_G = 1;
+
 export interface TravelTime {
   readonly earthYears: number;
   readonly shipYears: number;

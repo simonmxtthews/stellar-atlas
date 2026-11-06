@@ -36,7 +36,7 @@ const fragmentShader = /* glsl */ `
     float r = length(gl_PointCoord - 0.5) * 2.0;
     float ring = smoothstep(0.74, 0.8, r) * (1.0 - smoothstep(0.88, 0.94, r));
     if (ring <= 0.0) discard;
-    gl_FragColor = vec4(vec3(0.5, 0.85, 1.0) * ring * (0.6 + 0.4 * vPulse), 1.0);
+    gl_FragColor = vec4(vec3(0.56, 0.7, 1.0) * ring * (0.6 + 0.4 * vPulse), 1.0);
   }
 `;
 

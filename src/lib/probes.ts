@@ -2,7 +2,7 @@ import type { Position, Probe, StarSystem } from '../types/catalogue';
 
 export const MAX_YEARS_AHEAD = 100_000;
 export const STAR_EPOCH_YEAR = 2000; // the catalogue's positions are J2000
-export const PROBE_COLORS = ['#fbbf24', '#34d399', '#f87171', '#a78bfa', '#22d3ee'] as const;
+export const PROBE_COLORS = ['#f0c674', '#6fd8a8', '#f28b82', '#b79cf2', '#6fd0e8'] as const;
 
 export function probePositionAt(probe: Probe, epochYear: number, year: number): Position {
   const elapsed = year - epochYear;

@@ -16,10 +16,12 @@ function PlaneLines({
   vertices,
   color,
   opacity,
+  renderOrder = 0,
 }: {
   readonly vertices: Float32Array;
   readonly color: string;
   readonly opacity: number;
+  readonly renderOrder?: number;
 }) {
   const geometry = useMemo(
     () => new BufferGeometry().setAttribute('position', new BufferAttribute(vertices, 3)),
@@ -27,15 +29,17 @@ function PlaneLines({
   );
   useEffect(() => () => geometry.dispose(), [geometry]);
   return (
-    <lineSegments geometry={geometry} frustumCulled={false}>
+    <lineSegments geometry={geometry} frustumCulled={false} renderOrder={renderOrder}>
       <lineBasicMaterial color={color} transparent opacity={opacity} depthWrite={false} />
     </lineSegments>
   );
 }
 
+// Always under the rings: blended lines look different drawn in another order, and a toggled-on
+// grid would otherwise draw last.
 function GalacticGrid({ radiusLy }: { readonly radiusLy: number }) {
   const vertices = useMemo(() => gridVertices(radiusLy), [radiusLy]);
-  return <PlaneLines vertices={vertices} color="#3f6f9f" opacity={0.25} />;
+  return <PlaneLines vertices={vertices} color="#55607a" opacity={0.28} renderOrder={-1} />;
 }
 
 // Rings count distance from the reference star, on a plane through it parallel to the galaxy's.
@@ -57,8 +61,8 @@ function RangeRings({
   const [x, y, z] = galacticToScene(center);
   return (
     <group position={[x, y, z]}>
-      <PlaneLines vertices={minor} color="#5b9bd5" opacity={0.35} />
-      <PlaneLines vertices={major} color="#8ec5f5" opacity={0.7} />
+      <PlaneLines vertices={minor} color="#66728f" opacity={0.35} />
+      <PlaneLines vertices={major} color="#9aa8c8" opacity={0.6} />
     </group>
   );
 }

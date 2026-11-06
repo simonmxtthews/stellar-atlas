@@ -26,8 +26,8 @@ const NEIGHBOUR_COUNT = 8;
 
 function Fact({ label, value }: { readonly label: string; readonly value: ReactNode }) {
   return (
-    <div className="flex justify-between gap-3 border-b border-slate-800/70 py-0.5">
-      <dt className="text-slate-400">{label}</dt>
+    <div className="flex justify-between gap-3 border-b border-hairline py-0.5">
+      <dt className="text-muted">{label}</dt>
       <dd className="text-right tabular-nums">{value}</dd>
     </div>
   );
@@ -68,11 +68,13 @@ function StarFacts({ star, reference }: { readonly star: Star; readonly referenc
   );
 }
 
+const SOLAR_FACT_SHEET = 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/';
+
 function PlanetsTable({ planets }: { readonly planets: readonly Planet[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-xs whitespace-nowrap">
-        <thead className="text-slate-400">
+        <thead className="text-muted">
           <tr>
             {[
               'Name',
@@ -92,7 +94,7 @@ function PlanetsTable({ planets }: { readonly planets: readonly Planet[] }) {
         </thead>
         <tbody className="tabular-nums">
           {planets.map((planet) => (
-            <tr key={planet.id} className="border-t border-slate-800/70">
+            <tr key={planet.id} className="border-t border-hairline">
               <th scope="row" className="py-1 pr-3 font-medium">
                 {planet.name}
               </th>
@@ -102,7 +104,8 @@ function PlanetsTable({ planets }: { readonly planets: readonly Planet[] }) {
               <td className="pr-3">{formatValue(planet.semiMajorAu, 3)}</td>
               <td className="pr-3">{formatValue(planet.eqTempK, 0)}</td>
               <td className="pr-3">
-                {planet.discoveryMethod}, {planet.discoveryYear}
+                {planet.discoveryMethod}
+                {planet.discoveryYear !== undefined && `, ${planet.discoveryYear}`}
               </td>
               <td>
                 {planet.inHabitableZone === undefined
@@ -127,17 +130,19 @@ function Planets({ star, catalogue }: { readonly star: Star; readonly catalogue:
       {first ? (
         <PlanetsTable planets={planets} />
       ) : (
-        <p className="text-slate-400">No confirmed exoplanets</p>
+        <p className="text-muted">No confirmed exoplanets</p>
       )}
       <HzStrip star={star} planets={planets} />
       {first && (
         <a
-          href={archiveOverviewUrl(first.name, first.letter)}
+          href={
+            star.id === SOL_ID ? SOLAR_FACT_SHEET : archiveOverviewUrl(first.name, first.letter)
+          }
           target="_blank"
           rel="noreferrer"
-          className="mt-1 inline-block text-xs text-sky-400 hover:underline"
+          className="mt-1 inline-block text-xs text-accent hover:underline"
         >
-          NASA Exoplanet Archive overview
+          {star.id === SOL_ID ? 'NASA Planetary Fact Sheet' : 'NASA Exoplanet Archive overview'}
         </a>
       )}
     </ModalSection>
@@ -165,13 +170,10 @@ function Neighbours({
             <button
               type="button"
               onClick={() => select(neighbour.id)}
-              className="flex w-full justify-between gap-3 rounded px-1 py-0.5 text-left hover:bg-slate-800"
+              className="flex w-full justify-between gap-3 rounded px-1 py-0.5 text-left hover:bg-raised"
             >
               <span className="truncate">{neighbour.name}</span>
-              <span
-                data-testid="neighbour-distance"
-                className="text-right text-slate-400 tabular-nums"
-              >
+              <span data-testid="neighbour-distance" className="text-right text-muted tabular-nums">
                 {formatValue(distanceLy, 2, 'ly')} ·{' '}
                 {formatTravelTime(
                   systemTravelTime(drive, catalogue.systems, system.id, neighbour.id, distanceLy),
@@ -216,30 +218,30 @@ export function StarModal({ catalogue }: { readonly catalogue: Catalogue }) {
           onCloseAutoFocus={(event) => event.preventDefault()}
           onEscapeKeyDown={(event) => event.preventDefault()}
           onInteractOutside={(event) => event.preventDefault()}
-          className="fixed top-3 right-3 bottom-3 z-10 w-[26rem] overflow-y-auto rounded-lg border border-slate-700/60 bg-slate-950/90 p-4 text-sm text-slate-200 backdrop-blur max-md:inset-0 max-md:w-auto max-md:rounded-none"
+          className="fixed top-3 right-3 bottom-3 z-10 w-[26rem] overflow-y-auto rounded-xl border border-line shadow-panel bg-panel p-4 text-sm text-ink backdrop-blur max-md:inset-0 max-md:w-auto max-md:rounded-none"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <Dialog.Title className="text-lg font-medium">{star.displayName}</Dialog.Title>
               {customName && (
-                <p data-testid="custom-name" className="text-sm text-sky-200">
+                <p data-testid="custom-name" className="text-sm text-accent-soft">
                   {customName}
                 </p>
               )}
               {system.name !== star.displayName && (
-                <p className="text-xs text-slate-400">{system.name} system</p>
+                <p className="text-xs text-muted">{system.name} system</p>
               )}
             </div>
             <Dialog.Close
               onClick={closeDetail}
               aria-label="Close"
-              className="rounded px-2 py-0.5 text-slate-400 hover:bg-slate-800"
+              className="rounded px-2 py-0.5 text-muted hover:bg-raised"
             >
               ✕
             </Dialog.Close>
           </div>
           {names.length > 0 && (
-            <p data-testid="designations" className="mt-1 text-xs text-slate-400">
+            <p data-testid="designations" className="mt-1 text-xs text-muted">
               {names.join(' · ')}
             </p>
           )}
@@ -251,7 +253,7 @@ export function StarModal({ catalogue }: { readonly catalogue: Catalogue }) {
                   <Tabs.Trigger
                     key={member.id}
                     value={member.id}
-                    className="rounded border border-slate-700 px-2 py-0.5 text-xs text-slate-300 data-[state=active]:border-sky-400 data-[state=active]:text-sky-200"
+                    className="rounded-md border border-line px-2 py-0.5 text-xs text-ink-soft transition-colors hover:bg-raised data-[state=active]:border-accent/50 data-[state=active]:bg-accent/15 data-[state=active]:text-accent-soft"
                   >
                     {planetCountLabel(member)}
                   </Tabs.Trigger>

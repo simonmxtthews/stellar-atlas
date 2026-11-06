@@ -13,6 +13,7 @@ import { SearchBar } from './ui/SearchBar';
 import { StarModal } from './ui/StarModal';
 import { StarTooltip } from './ui/StarTooltip';
 import { Toolbar } from './ui/Toolbar';
+import { TimelineBar } from './ui/YearControl';
 
 const CAMERA = {
   fov: CAMERA_FOV,
@@ -66,7 +67,11 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
           visibleSystems={visibleSystems}
         />
       </Canvas>
-      <FilterPanel stars={catalogue.stars} visible={visible} />
+      {/* Stacked into one sheet on a phone; placed apart on a wide screen. */}
+      <div className="md:contents max-md:absolute max-md:inset-x-0 max-md:bottom-0">
+        <TimelineBar />
+        <FilterPanel stars={catalogue.stars} visible={visible} />
+      </div>
       <Toolbar catalogue={catalogue} visibleSystems={visibleSystems} />
       <SearchBar catalogue={catalogue} />
       <StarTooltip catalogue={catalogue} />
@@ -89,7 +94,7 @@ export default function App() {
 
   if (catalogue) return <Map catalogue={catalogue} />;
   return (
-    <div role="status" className="flex h-full items-center justify-center text-sm text-slate-400">
+    <div role="status" className="flex h-full items-center justify-center text-sm text-muted">
       {error ? `Could not load the star catalogue (${error}).` : 'Loading star catalogue…'}
     </div>
   );

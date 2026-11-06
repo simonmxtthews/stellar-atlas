@@ -62,7 +62,7 @@ export const planetSchema = z.strictObject({
   eqTempK: z.number().positive().optional(),
   insolEarth: z.number().min(0).optional(),
   discoveryMethod: z.string().min(1),
-  discoveryYear: z.number().int(),
+  discoveryYear: z.number().int().optional(),
   inHabitableZone: z.boolean().optional(),
 }) satisfies z.ZodType<Planet>;
 
