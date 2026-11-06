@@ -3,9 +3,10 @@ import type { HostMatch } from './crossmatch';
 import { matchHosts } from './crossmatch';
 import { bolometricLuminosity, habitableZone, isMainSequence, massFromLuminosity } from './derive';
 import type { ArchiveHost, StarDraft } from './drafts';
-import { distPcToLy, draftToCandidate, hostToDraft, optionalNumber } from './drafts';
+import { distPcToLy, draftToCandidate, hostToDraft, optionalNumber, SOL_ID } from './drafts';
 import { pickDisplayName, slugify, systemNameFromPrimary } from './names';
 import type { ExoplanetRow } from './schema';
+import { SOLAR_PLANETS, type SolarPlanet } from './solarPlanets';
 import {
   bvToTemperature,
   classColour,
@@ -82,6 +83,20 @@ function rowToPlanet(row: ExoplanetRow, host: Star | undefined): Planet {
     ...(host.hzAu &&
       semiMajorAu !== undefined && {
         inHabitableZone: semiMajorAu >= host.hzAu[0] && semiMajorAu <= host.hzAu[1],
+      }),
+  };
+}
+
+function solarPlanet(planet: SolarPlanet, sun: Star): Planet {
+  const { semiMajorAu } = planet;
+  return {
+    ...planet,
+    id: `pl:${slugify(planet.name)}`,
+    letter: planet.name, // they have no letter
+    hostStarId: sun.id,
+    ...(sun.hzAu &&
+      semiMajorAu !== undefined && {
+        inHabitableZone: semiMajorAu >= sun.hzAu[0] && semiMajorAu <= sun.hzAu[1],
       }),
   };
 }
@@ -214,12 +229,16 @@ export function assemble(input: AssembleInput): AssembleResult {
     });
   }
 
-  const planets = input.planetRows
-    .map((row) => {
-      const hostId = hostStarIds.get(row.hostname);
-      return rowToPlanet(row, hostId === undefined ? undefined : firstPass.get(hostId));
-    })
-    .sort((a, b) => a.id.localeCompare(b.id));
+  const sun = firstPass.get(SOL_ID);
+  const planets = [
+    ...input.planetRows
+      .map((row) => {
+        const hostId = hostStarIds.get(row.hostname);
+        return rowToPlanet(row, hostId === undefined ? undefined : firstPass.get(hostId));
+      })
+      .sort((a, b) => a.id.localeCompare(b.id)),
+    ...(sun ? SOLAR_PLANETS.map((planet) => solarPlanet(planet, sun)) : []),
+  ];
 
   const planetIdsByStar = new Map<string, string[]>();
   for (const planet of planets) {

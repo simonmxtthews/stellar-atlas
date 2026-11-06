@@ -10,9 +10,11 @@ import { formatTravelTime, legTravelTime, routeTravelTime } from '../lib/travel'
 import { systemLabel } from '../lib/worldView';
 import type { Catalogue } from '../store/catalogue';
 import { useUi } from '../store/ui';
-import { useWorld } from '../store/world';
+import { ROUTE_DEFAULTS, useWorld } from '../store/world';
 import { ROUTE_KINDS, type Route, type RouteKind } from '../types/world';
 import { BUTTON_CLASS, FIELD_LABEL_CLASS, INPUT_CLASS } from './controlStyles';
+import { ResetButton } from './ResetButton';
+import { Slider } from './Slider';
 
 const MIN_WIDTH = 1;
 const MAX_WIDTH = 6;
@@ -35,9 +37,9 @@ function Waypoints({ route, catalogue }: { readonly route: Route; readonly catal
         const leg = previous === undefined ? [] : routeLegs([previous, id], catalogue.systemsById);
         return (
           // A route can pass through one system twice.
-          <li key={`${id}:${i}`} className="border-t border-slate-800/70 py-1 text-xs">
+          <li key={`${id}:${i}`} className="border-t border-hairline py-1 text-xs">
             {leg[0] && (
-              <p data-testid="leg-distance" className="text-slate-400 tabular-nums">
+              <p data-testid="leg-distance" className="text-muted tabular-nums">
                 ↓ {formatValue(leg[0].distanceLy, 2, 'ly')} ·{' '}
                 {formatTravelTime(legTravelTime(drive, catalogue.systems, leg[0]))}
               </p>
@@ -116,13 +118,19 @@ function RouteEditor({
             ))}
           </select>
         </label>
+        <ResetButton
+          name="kind"
+          to={ROUTE_DEFAULTS.kind}
+          isDefault={route.kind === ROUTE_DEFAULTS.kind}
+          onReset={() => updateRoute(route.id, { kind: ROUTE_DEFAULTS.kind })}
+        />
         <label>
           <span className={FIELD_LABEL_CLASS}>Colour</span>
           <input
             type="color"
             value={route.color}
             onChange={(event) => updateRoute(route.id, { color: event.target.value }, 'color')}
-            className="block h-7 w-10 rounded border border-slate-700 bg-slate-900"
+            className="block h-7 w-10 rounded-md border border-line bg-field"
           />
         </label>
       </div>
@@ -132,14 +140,18 @@ function RouteEditor({
             type="checkbox"
             checked={route.dashed}
             onChange={() => updateRoute(route.id, { dashed: !route.dashed })}
-            className="accent-sky-400"
           />
           Dashed
         </label>
+        <ResetButton
+          name="dashes"
+          to="solid"
+          isDefault={route.dashed === ROUTE_DEFAULTS.dashed}
+          onReset={() => updateRoute(route.id, { dashed: ROUTE_DEFAULTS.dashed })}
+        />
         <label className="flex flex-1 items-center gap-2 text-xs">
           Width
-          <input
-            type="range"
+          <Slider
             min={MIN_WIDTH}
             max={MAX_WIDTH}
             step={0.5}
@@ -147,9 +159,15 @@ function RouteEditor({
             onChange={(event) =>
               updateRoute(route.id, { width: Number(event.target.value) }, 'width')
             }
-            className="min-w-0 flex-1 accent-sky-400"
+            className="min-w-0 flex-1"
           />
         </label>
+        <ResetButton
+          name="width"
+          to={String(ROUTE_DEFAULTS.width)}
+          isDefault={route.width === ROUTE_DEFAULTS.width}
+          onReset={() => updateRoute(route.id, { width: ROUTE_DEFAULTS.width })}
+        />
       </div>
       <label className="mt-2 block">
         <span className={FIELD_LABEL_CLASS}>Notes</span>
@@ -185,7 +203,7 @@ export function RoutePanel({ catalogue }: { readonly catalogue: Catalogue }) {
 
   if (routes.length === 0) {
     return (
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-muted">
         No routes yet. Press <kbd>R</kbd>, then click systems in order.
       </p>
     );
@@ -198,20 +216,19 @@ export function RoutePanel({ catalogue }: { readonly catalogue: Catalogue }) {
         const legs = routeLegs(route.waypoints, catalogue.systemsById);
         const total = routeLengthLy(legs);
         return (
-          <li key={route.id} className="border-b border-slate-800/70 py-1.5 last:border-b-0">
+          <li key={route.id} className="border-b border-hairline py-1.5 last:border-b-0">
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
                 aria-label={`Show ${title}`}
                 checked={!hiddenRouteIds.includes(route.id)}
                 onChange={() => toggleRouteHidden(route.id)}
-                className="accent-sky-400"
               />
               <button
                 type="button"
                 aria-expanded={expanded}
                 onClick={() => showRoute(expanded ? null : route.id)}
-                className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded px-1 text-left hover:bg-slate-800"
+                className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded px-1 text-left hover:bg-raised"
               >
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span
@@ -221,7 +238,7 @@ export function RoutePanel({ catalogue }: { readonly catalogue: Catalogue }) {
                   />
                   <span className="truncate">{title}</span>
                 </span>
-                <span className="shrink-0 text-right text-xs text-slate-400 tabular-nums">
+                <span className="shrink-0 text-right text-xs text-muted tabular-nums">
                   <span data-testid="route-total" className="block">
                     {formatValue(total, 2, 'ly')}
                   </span>

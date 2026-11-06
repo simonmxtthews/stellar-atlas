@@ -2,9 +2,11 @@ import { useMemo } from 'react';
 import { systemsWithin } from '../lib/neighbours';
 import { formatValue } from '../lib/starFacts';
 import type { Catalogue } from '../store/catalogue';
-import { useUi } from '../store/ui';
+import { DEFAULT_RANGE_SPHERE_LY, useUi } from '../store/ui';
 import type { StarSystem } from '../types/catalogue';
 import { ModalSection } from './ModalSection';
+import { ResetButton } from './ResetButton';
+import { Slider } from './Slider';
 
 const MIN_RANGE_LY = 1;
 const MAX_RANGE_LY = 50;
@@ -26,21 +28,28 @@ function RangeList({
   );
   return (
     <ModalSection title="Range sphere">
-      <label className="flex items-center gap-2 text-xs">
-        Radius
-        <input
-          type="range"
-          aria-label="Range sphere radius"
-          min={MIN_RANGE_LY}
-          max={MAX_RANGE_LY}
-          step={1}
-          value={radiusLy}
-          onChange={(event) => setRangeSphere(Number(event.target.value))}
-          className="min-w-0 flex-1 accent-sky-400"
+      <div className="flex items-center gap-2">
+        <label className="flex min-w-0 flex-1 items-center gap-2 text-xs">
+          Radius
+          <Slider
+            aria-label="Range sphere radius"
+            min={MIN_RANGE_LY}
+            max={MAX_RANGE_LY}
+            step={1}
+            value={radiusLy}
+            onChange={(event) => setRangeSphere(Number(event.target.value))}
+            className="min-w-0 flex-1"
+          />
+          <span className="tabular-nums">{radiusLy} ly</span>
+        </label>
+        <ResetButton
+          name="range sphere radius"
+          to={`${DEFAULT_RANGE_SPHERE_LY} ly`}
+          isDefault={radiusLy === DEFAULT_RANGE_SPHERE_LY}
+          onReset={() => setRangeSphere(DEFAULT_RANGE_SPHERE_LY)}
         />
-        <span className="tabular-nums">{radiusLy} ly</span>
-      </label>
-      <p data-testid="range-count" className="mt-1 text-xs text-slate-400">
+      </div>
+      <p data-testid="range-count" className="mt-1 text-xs text-muted">
         {inside.length} system{inside.length === 1 ? '' : 's'} inside
       </p>
       <ol aria-label="Systems in range" className="mt-1 max-h-48 overflow-y-auto">
@@ -49,12 +58,10 @@ function RangeList({
             <button
               type="button"
               onClick={() => select(other.id)}
-              className="flex w-full justify-between gap-3 rounded px-1 py-0.5 text-left hover:bg-slate-800"
+              className="flex w-full justify-between gap-3 rounded px-1 py-0.5 text-left hover:bg-raised"
             >
               <span className="truncate">{other.name}</span>
-              <span className="text-slate-400 tabular-nums">
-                {formatValue(distanceLy, 2, 'ly')}
-              </span>
+              <span className="text-muted tabular-nums">{formatValue(distanceLy, 2, 'ly')}</span>
             </button>
           </li>
         ))}

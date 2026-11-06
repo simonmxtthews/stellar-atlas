@@ -12,7 +12,7 @@ import { Polyline } from './Routes';
 
 const OVERLAY_LABEL = labelStyle(LabelTier.Tagged); // the map's own colours are set per label
 const SOL: Position = [0, 0, 0];
-const PULSAR_COLOR = '#f0abfc';
+const PULSAR_COLOR = '#e3a8ee';
 const ARROW_LENGTH_FRACTION = 0.12;
 const CONE_LENGTH_FRACTION = 0.03;
 const UP = new Vector3(0, 1, 0);

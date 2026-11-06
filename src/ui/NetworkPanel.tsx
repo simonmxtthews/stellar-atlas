@@ -3,10 +3,11 @@ import { cachedJumpGraph, componentColor, connectedComponents, type Hub } from '
 import type { HubRequest } from '../lib/hubs.worker';
 import { formatValue } from '../lib/starFacts';
 import type { Catalogue } from '../store/catalogue';
-import { useUi } from '../store/ui';
+import { DEFAULT_OVERLAYS, useUi } from '../store/ui';
 import { useWorld } from '../store/world';
 import type { StarSystem } from '../types/catalogue';
 import { BUTTON_CLASS } from './controlStyles';
+import { ResetButton } from './ResetButton';
 
 const HUB_LIMIT = 10;
 const LEGEND_LIMIT = 8;
@@ -65,20 +66,20 @@ function Hubs({
   const running = current !== null && current.hubs === null;
   return (
     <div className="mt-3">
-      <h2 className="text-xs tracking-wide text-slate-400 uppercase">Hub finder</h2>
-      <p className="mt-1 text-xs text-slate-400">
+      <h2 className="section-label">Hub finder</h2>
+      <p className="mt-1 text-xs text-muted">
         Chokepoints: the share of shortest paths between other systems that pass through each one.
       </p>
       <button type="button" disabled={running} onClick={start} className={`${BUTTON_CLASS} mt-1`}>
         {running ? 'Ranking…' : 'Rank hubs'}
       </button>
       {current?.failed && (
-        <p role="alert" className="mt-1 text-xs text-rose-300">
+        <p role="alert" className="mt-1 text-xs text-danger">
           The ranking failed.
         </p>
       )}
       {current?.hubs && !current.failed && current.hubs.length === 0 && (
-        <p className="mt-1 text-xs text-slate-400">No system links any others at this max jump.</p>
+        <p className="mt-1 text-xs text-muted">No system links any others at this max jump.</p>
       )}
       {current?.hubs && current.hubs.length > 0 && (
         <ol aria-label="Hubs" className="mt-1">
@@ -87,10 +88,10 @@ function Hubs({
               <button
                 type="button"
                 onClick={() => select(id)}
-                className="flex w-full justify-between gap-3 rounded px-1 py-0.5 text-left text-xs hover:bg-slate-800"
+                className="flex w-full justify-between gap-3 rounded px-1 py-0.5 text-left text-xs hover:bg-raised"
               >
                 <span className="truncate">{catalogue.systemsById.get(id)?.name ?? id}</span>
-                <span className="text-slate-400 tabular-nums">{formatValue(score * 100, 1)}%</span>
+                <span className="text-muted tabular-nums">{formatValue(score * 100, 1)}%</span>
               </button>
             </li>
           ))}
@@ -117,7 +118,7 @@ function NetworkDetails({
   const isolated = sizes.length - clusters.length;
   return (
     <>
-      <p data-testid="network-stats" className="mt-2 text-xs text-slate-400 tabular-nums">
+      <p data-testid="network-stats" className="mt-2 text-xs text-muted tabular-nums">
         {systems.length.toLocaleString('en')} systems, {links.toLocaleString('en')} links within{' '}
         {maxJumpLy} ly: {clusters.length} cluster{clusters.length === 1 ? '' : 's'}, {isolated}{' '}
         isolated
@@ -151,10 +152,11 @@ export function NetworkPanel({
 }) {
   const shown = useUi((state) => state.overlays.jumpNetwork);
   const toggleOverlay = useUi((state) => state.toggleOverlay);
+  const resetOverlays = useUi((state) => state.resetOverlays);
   const drive = useWorld((state) => state.world.drive);
   if (drive.type !== 'jump') {
     return (
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-muted">
         The jump network, hub finder and auto-route follow a jump drive&apos;s max jump. Choose a
         jump drive in the Drive panel to use them.
       </p>
@@ -162,15 +164,18 @@ export function NetworkPanel({
   }
   return (
     <>
-      <label className="flex items-center gap-2 text-xs">
-        <input
-          type="checkbox"
-          checked={shown}
-          onChange={() => toggleOverlay('jumpNetwork')}
-          className="accent-sky-400"
+      <div className="flex items-center justify-between gap-2">
+        <label className="flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={shown} onChange={() => toggleOverlay('jumpNetwork')} />
+          Show jump network
+        </label>
+        <ResetButton
+          name="jump network display"
+          to="off"
+          isDefault={shown === DEFAULT_OVERLAYS.jumpNetwork}
+          onReset={() => resetOverlays(['jumpNetwork'])}
         />
-        Show jump network
-      </label>
+      </div>
       <NetworkDetails catalogue={catalogue} systems={visibleSystems} maxJumpLy={drive.maxJumpLy} />
     </>
   );

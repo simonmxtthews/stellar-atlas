@@ -21,14 +21,14 @@ export interface LabelStyle {
 export function labelStyle(tier: LabelTier): LabelStyle {
   switch (tier) {
     case LabelTier.Selected:
-      return { px: 14, gapEm: SELECTED_LABEL_GAP_PX / 14, color: '#e0f2fe' };
+      return { px: 14, gapEm: SELECTED_LABEL_GAP_PX / 14, color: '#dfe8ff' };
     case LabelTier.RouteEndpoint:
     case LabelTier.Tagged:
-      return { px: 12, gapEm: LABEL_GAP_PX / 12, color: '#cbd5e1' };
+      return { px: 12, gapEm: LABEL_GAP_PX / 12, color: '#c8c8cc' };
     case LabelTier.Proper:
-      return { px: 11, gapEm: LABEL_GAP_PX / 11, color: '#8494a9' };
+      return { px: 11, gapEm: LABEL_GAP_PX / 11, color: '#8b8c96' };
     case LabelTier.Other:
-      return { px: 10, gapEm: LABEL_GAP_PX / 10, color: '#566479' };
+      return { px: 10, gapEm: LABEL_GAP_PX / 10, color: '#5f606b' };
   }
 }
 

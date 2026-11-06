@@ -71,7 +71,7 @@ export interface Planet {
   readonly eqTempK?: number;
   readonly insolEarth?: number;
   readonly discoveryMethod: string;
-  readonly discoveryYear: number;
+  readonly discoveryYear?: number; // the Sun's oldest planets have none
   readonly inHabitableZone?: boolean; // derived from host hzAu
 }
 

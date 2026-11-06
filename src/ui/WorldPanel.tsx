@@ -34,21 +34,19 @@ function ImportChoice({
     <div
       role="group"
       aria-label="Import"
-      className="mt-2 rounded border border-slate-700 p-2 text-xs"
+      className="mt-2 rounded-md border border-line p-2 text-xs"
     >
       <p>
         “{world.name}”: {world.routes.length} routes, {world.tags.length} tags,{' '}
         {world.regions.length} regions, {Object.keys(world.starMeta).length} annotated stars.
       </p>
       {unknown.length > 0 && (
-        <p data-testid="unknown-ids" className="mt-1 break-words text-amber-300">
+        <p data-testid="unknown-ids" className="mt-1 break-words text-warn">
           {unknown.length} ID{unknown.length === 1 ? '' : 's'} not in this catalogue, kept but not
           shown: {unknown.join(', ')}
         </p>
       )}
-      <p className="mt-1 text-slate-400">
-        Merge keeps this world's version of anything both share.
-      </p>
+      <p className="mt-1 text-muted">Merge keeps this world's version of anything both share.</p>
       <div className="mt-2 flex gap-1">
         <button
           type="button"
@@ -206,7 +204,7 @@ export function WorldPanel({ catalogue }: { readonly catalogue: Catalogue }) {
         </button>
       </div>
       {importError && (
-        <p role="alert" className="mt-2 text-xs text-rose-300">
+        <p role="alert" className="mt-2 text-xs text-danger">
           {importError}
         </p>
       )}

@@ -20,7 +20,7 @@ export function StarTooltip({ catalogue }: { readonly catalogue: Catalogue }) {
     <div
       role="tooltip"
       data-testid="star-tooltip"
-      className="pointer-events-none fixed z-20 max-w-56 rounded border border-slate-700/60 bg-slate-950/90 px-2 py-1 text-xs text-slate-200"
+      className="pointer-events-none fixed z-20 max-w-56 rounded-md border border-line shadow-panel bg-panel px-2 py-1 text-xs text-ink"
       style={{
         left: hover.x + (flipX ? -CURSOR_GAP_PX : CURSOR_GAP_PX),
         top: hover.y + CURSOR_GAP_PX,
@@ -30,7 +30,7 @@ export function StarTooltip({ catalogue }: { readonly catalogue: Catalogue }) {
       <div className="font-medium">
         {withCustomName(star.displayName, customNameOf(starMeta, star.id))}
       </div>
-      <div className="text-slate-400">
+      <div className="text-muted">
         {spectralCode(star.spectral)} ·{' '}
         {formatValue(distanceFromReference(star, reference), 2, 'ly')} from{' '}
         {reference?.displayName ?? 'Sol'}

@@ -1,3 +1,4 @@
+import { INK_COLOR } from '../lib/palette';
 import { Line } from '@react-three/drei';
 import { useMemo } from 'react';
 import { galacticToScene } from '../lib/coords';
@@ -10,9 +11,9 @@ import type { Position, StarSystem } from '../types/catalogue';
 import type { Route } from '../types/world';
 import { useMapShift, type MapShift } from './useMapShift';
 
-export const DRAFT_COLOR = '#e2e8f0';
-export const RULER_COLOR = '#fde047';
-export const AUTO_ROUTE_COLOR = '#5eead4';
+export const DRAFT_COLOR = INK_COLOR;
+export const RULER_COLOR = '#f5d76e';
+export const AUTO_ROUTE_COLOR = '#6fd8c4';
 const DASH_LY = 1;
 const GAP_LY = 0.6;
 

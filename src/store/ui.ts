@@ -15,6 +15,15 @@ export interface Overlays {
   readonly pulsars: boolean;
 }
 
+export const DEFAULT_OVERLAYS: Overlays = {
+  grid: true,
+  rings: true,
+  dropLines: true,
+  jumpNetwork: false,
+  probes: false,
+  pulsars: false,
+};
+
 // The system open in the detail modal; starId null shows its primary.
 export interface Detail {
   readonly systemId: string;
@@ -55,6 +64,7 @@ interface UiState {
   readonly setFilters: (patch: Partial<StarFilters>) => void;
   readonly toggleClass: (cls: SpectralClass) => void;
   readonly toggleOverlay: (overlay: keyof Overlays) => void;
+  readonly resetOverlays: (overlays: readonly (keyof Overlays)[]) => void;
   readonly flyToStar: (starId: string) => void;
   readonly flyHome: () => void;
   readonly clearOrbitStar: () => void;
@@ -83,14 +93,7 @@ interface UiState {
 
 export const useUi = create<UiState>()((set) => ({
   filters: DEFAULT_FILTERS,
-  overlays: {
-    grid: true,
-    rings: true,
-    dropLines: true,
-    jumpNetwork: false,
-    probes: false,
-    pulsars: false,
-  },
+  overlays: DEFAULT_OVERLAYS,
   orbitStarId: SOL_ID,
   flyRequest: null,
   selectedSystemIds: [],
@@ -122,6 +125,13 @@ export const useUi = create<UiState>()((set) => ({
     }),
   toggleOverlay: (overlay) =>
     set((state) => ({ overlays: { ...state.overlays, [overlay]: !state.overlays[overlay] } })),
+  resetOverlays: (overlays) =>
+    set((state) => ({
+      overlays: {
+        ...state.overlays,
+        ...Object.fromEntries(overlays.map((overlay) => [overlay, DEFAULT_OVERLAYS[overlay]])),
+      },
+    })),
   flyToStar: (starId) => set({ flyRequest: { kind: 'star', starId }, orbitStarId: starId }),
   flyHome: () => set({ flyRequest: { kind: 'home' }, orbitStarId: SOL_ID }),
   clearOrbitStar: () => set({ orbitStarId: null }),

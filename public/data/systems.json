@@ -1,5 +1,5 @@
 [
-{"id":"sys:hyg:0","name":"Sol","starIds":["hyg:0"],"pos":[0,0,0],"distLy":0,"planetCount":0},
+{"id":"sys:hyg:0","name":"Sol","starIds":["hyg:0"],"pos":[0,0,0],"distLy":0,"planetCount":8},
 {"id":"sys:hyg:71456","name":"Alpha Centauri","starIds":["hyg:71456","hyg:71453","hyg:70666"],"pos":[3.0935,-3.0152,-0.0512],"distLy":4.3209,"planetCount":2,"motion":{"velLyPerYear":[-0.0001086,0.00001313,0.00004148],"radialKnown":true}},
 {"id":"sys:hyg:87665","name":"Barnard's Star","starIds":["hyg:87665"],"pos":[4.9429,2.9709,1.4445],"distLy":5.9484,"planetCount":4,"motion":{"velLyPerYear":[-0.0004664,0.000007972,0.00005625],"radialKnown":true}},
 {"id":"sys:ovr:luhman-16-a","name":"Luhman 16","starIds":["ovr:luhman-16-a","ovr:luhman-16-b"],"pos":[1.6952,-6.2494,0.5993],"distLy":6.5029,"planetCount":0},

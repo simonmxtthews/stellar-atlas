@@ -1,8 +1,10 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { MAX_RADIUS_LY, MIN_RADIUS_LY, SOL_ID } from '../lib/filters';
-import { useUi, type Overlays } from '../store/ui';
+import { DEFAULT_FILTERS, MAX_RADIUS_LY, MIN_RADIUS_LY, SOL_ID } from '../lib/filters';
+import { DEFAULT_OVERLAYS, useUi, type Overlays } from '../store/ui';
 import type { SpectralClass, Star } from '../types/catalogue';
 import { RegionLegend } from './RegionLegend';
+import { ResetButton } from './ResetButton';
+import { Slider } from './Slider';
 
 const CLASS_LABELS: readonly (readonly [SpectralClass, string, string])[] = [
   ['O', 'O', '#9bb0ff'],
@@ -38,7 +40,7 @@ function Check({
 }) {
   return (
     <label className="flex cursor-pointer items-center gap-2 py-0.5">
-      <input type="checkbox" checked={checked} onChange={onChange} className="accent-sky-400" />
+      <input type="checkbox" checked={checked} onChange={onChange} />
       {swatch && (
         <span
           aria-hidden
@@ -51,10 +53,21 @@ function Check({
   );
 }
 
-function Section({ title, children }: { readonly title: string; readonly children: ReactNode }) {
+function Section({
+  title,
+  reset,
+  children,
+}: {
+  readonly title: string;
+  readonly reset: ReactNode;
+  readonly children: ReactNode;
+}) {
   return (
     <fieldset className="mt-3">
-      <legend className="mb-1 text-xs tracking-wide text-slate-400 uppercase">{title}</legend>
+      <legend className="mb-1 flex w-full items-center justify-between text-xs">
+        <span className="section-label">{title}</span>
+        {reset}
+      </legend>
       {children}
     </fieldset>
   );
@@ -78,6 +91,7 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
   const setFilters = useUi((state) => state.setFilters);
   const toggleClass = useUi((state) => state.toggleClass);
   const toggleOverlay = useUi((state) => state.toggleOverlay);
+  const resetOverlays = useUi((state) => state.resetOverlays);
 
   const classes = useMemo(() => {
     const present = new Set(stars.map((star) => star.spectral.cls));
@@ -89,49 +103,49 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
   return (
     <aside
       aria-label="Map controls"
-      className="absolute top-16 left-3 w-60 rounded-lg border border-slate-700/60 bg-slate-950/85 p-3 text-sm text-slate-200 backdrop-blur max-md:inset-x-0 max-md:top-auto max-md:bottom-0 max-md:w-auto max-md:rounded-b-none"
+      className="absolute top-16 left-3 w-60 rounded-xl border border-line shadow-panel bg-panel p-3 text-sm text-ink backdrop-blur max-md:static max-md:w-auto max-md:rounded-none"
     >
       <div className="flex items-center justify-between gap-2">
-        <h1 className="font-medium">Stellar Atlas</h1>
+        <h1 className="font-medium tracking-tight">Stellar Atlas</h1>
         <button
           type="button"
           aria-expanded={open}
           onClick={() => setOpen(!open)}
-          className="rounded px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-800"
+          className="rounded px-2 py-0.5 text-xs text-muted hover:bg-raised"
         >
           {open ? 'Hide' : 'Show'}
         </button>
       </div>
-      <p data-testid="visible-count" className="mt-1 text-xs text-slate-400">
+      <p data-testid="visible-count" className="mt-1 text-xs text-muted">
         {visible.stars.toLocaleString('en')} stars in {visible.systems.toLocaleString('en')} systems
       </p>
-      <p data-testid="orbit-target" className="text-xs text-slate-400">
+      <p data-testid="orbit-target" className="text-xs text-muted">
         Orbit target: {orbitStar?.displayName ?? 'free'}
       </p>
       {reference && reference.id !== SOL_ID && (
-        <p className="flex items-center justify-between text-xs text-amber-200">
+        <p className="flex items-center justify-between text-xs text-warn">
           <span data-testid="reference-star">Distances from {reference.displayName}</span>
           <button
             type="button"
             onClick={() => setReference(SOL_ID)}
-            className="rounded px-2 py-0.5 text-slate-400 hover:bg-slate-800"
+            className="rounded px-2 py-0.5 text-muted hover:bg-raised"
           >
             Back to Sol
           </button>
         </p>
       )}
-      <p data-testid="label-count" className="text-xs text-slate-400">
+      <p data-testid="label-count" className="text-xs text-muted">
         {labelCount} labels
       </p>
       {selectedCount > 0 && (
-        <p className="flex items-center justify-between text-xs text-slate-300">
+        <p className="flex items-center justify-between text-xs text-ink-soft">
           <span data-testid="selection-count">
             {selectedCount} system{selectedCount === 1 ? '' : 's'} selected
           </span>
           <button
             type="button"
             onClick={clearSelection}
-            className="rounded px-2 py-0.5 text-slate-400 hover:bg-slate-800"
+            className="rounded px-2 py-0.5 text-muted hover:bg-raised"
           >
             Clear
           </button>
@@ -142,24 +156,43 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
 
       {open && (
         <div className="max-h-[calc(100dvh-14rem)] overflow-y-auto max-md:max-h-[45dvh]">
-          <label className="mt-3 block">
-            <span className="flex justify-between text-xs tracking-wide text-slate-400 uppercase">
-              Radius <span className="tracking-normal normal-case">{filters.radiusLy} ly</span>
-            </span>
-            <input
-              type="range"
-              aria-label="Radius"
-              min={MIN_RADIUS_LY}
-              // Away from Sol, the far side of the catalogue is further off than its radius.
-              max={MAX_RADIUS_LY + Math.ceil(reference?.distLy ?? 0)}
-              step={1}
-              value={filters.radiusLy}
-              onChange={(event) => setFilters({ radiusLy: Number(event.target.value) })}
-              className="mt-1 w-full accent-sky-400"
+          <div className="mt-3 flex items-end gap-2">
+            <label className="min-w-0 flex-1">
+              <span className="flex justify-between section-label">
+                Radius <span className="tracking-normal normal-case">{filters.radiusLy} ly</span>
+              </span>
+              <Slider
+                aria-label="Radius"
+                min={MIN_RADIUS_LY}
+                // Away from Sol, the far side of the catalogue is further off than its radius.
+                max={MAX_RADIUS_LY + Math.ceil(reference?.distLy ?? 0)}
+                step={1}
+                value={filters.radiusLy}
+                onChange={(event) => setFilters({ radiusLy: Number(event.target.value) })}
+                className="w-full"
+              />
+            </label>
+            <ResetButton
+              name="radius"
+              to={`${DEFAULT_FILTERS.radiusLy} ly`}
+              isDefault={filters.radiusLy === DEFAULT_FILTERS.radiusLy}
+              onReset={() => setFilters({ radiusLy: DEFAULT_FILTERS.radiusLy })}
             />
-          </label>
+          </div>
 
-          <Section title="Overlays">
+          <Section
+            title="Overlays"
+            reset={
+              <ResetButton
+                name="overlays"
+                to="their defaults"
+                isDefault={OVERLAY_LABELS.every(
+                  ([overlay]) => overlays[overlay] === DEFAULT_OVERLAYS[overlay],
+                )}
+                onReset={() => resetOverlays(OVERLAY_LABELS.map(([overlay]) => overlay))}
+              />
+            }
+          >
             {OVERLAY_LABELS.map(([overlay, label]) => (
               <Check
                 key={overlay}
@@ -170,7 +203,17 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
             ))}
           </Section>
 
-          <Section title="Spectral class">
+          <Section
+            title="Spectral class"
+            reset={
+              <ResetButton
+                name="spectral classes"
+                to="show all"
+                isDefault={filters.hiddenClasses.length === 0}
+                onReset={() => setFilters({ hiddenClasses: DEFAULT_FILTERS.hiddenClasses })}
+              />
+            }
+          >
             {classes.map(([cls, label, swatch]) => (
               <Check
                 key={cls}
@@ -182,7 +225,23 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
             ))}
           </Section>
 
-          <Section title="Systems">
+          <Section
+            title="Systems"
+            reset={
+              <ResetButton
+                name="system filters"
+                to="show all"
+                isDefault={!filters.hasPlanets && !filters.multipleOnly && !filters.taggedOnly}
+                onReset={() =>
+                  setFilters({
+                    hasPlanets: DEFAULT_FILTERS.hasPlanets,
+                    multipleOnly: DEFAULT_FILTERS.multipleOnly,
+                    taggedOnly: DEFAULT_FILTERS.taggedOnly,
+                  })
+                }
+              />
+            }
+          >
             <Check
               label="Has planets"
               checked={filters.hasPlanets}
@@ -200,7 +259,7 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
             />
           </Section>
 
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-faint">
             Drag to orbit, right-drag to pan, scroll to zoom. Click a star to select it, shift-click
             to add more; <kbd>Esc</kbd> closes then clears. Double-click flies to a star;{' '}
             <kbd>H</kbd> returns to Sol; <kbd>/</kbd> searches; <kbd>R</kbd> plots a route;{' '}

@@ -9,7 +9,7 @@ export function ModalSection({
 }) {
   return (
     <section aria-label={title} className="mt-4">
-      <h3 className="mb-1 text-xs tracking-wide text-slate-400 uppercase">{title}</h3>
+      <h3 className="mb-1 section-label">{title}</h3>
       {children}
     </section>
   );

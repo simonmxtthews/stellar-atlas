@@ -1,9 +1,133 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
 @import 'tailwindcss';
+
+/* The whole palette: colours outside this list don't exist as utilities. The map's colours are in
+   src/lib/palette.ts and the scene files, and --color-space must match SPACE_COLOR there. */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-*: initial;
+  --color-space: #0d0e12;
+  --color-panel: rgb(20 21 27 / 0.86);
+  --color-field: #0f1015;
+  --color-raised: #262832;
+  --color-hairline: rgb(255 255 255 / 0.06);
+  --color-line: rgb(255 255 255 / 0.1);
+  --color-line-strong: rgb(255 255 255 / 0.2);
+  --color-ink: #ecebe6;
+  --color-ink-soft: #c8c8cc;
+  --color-muted: #9a9ba6;
+  --color-faint: #82838e;
+  --color-accent: #8fb3ff;
+  --color-accent-soft: #c7d8ff;
+  --color-warn: #f0c674;
+  --color-danger: #f28b82;
+  --color-habitable: #5fcf9a;
+
+  --shadow-panel: 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+:root {
+  color-scheme: dark;
+  scrollbar-color: var(--color-line-strong) transparent;
+  scrollbar-width: thin;
+}
 
 html,
 body,
 #root {
   height: 100%;
   margin: 0;
-  background: #000;
+  background: var(--color-space);
+  color: var(--color-ink);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--color-accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+kbd {
+  border: 1px solid var(--color-line);
+  border-radius: 0.25rem;
+  padding: 0 0.25rem;
+  font-family: inherit;
+  font-size: 0.6875rem;
+  color: var(--color-ink-soft);
+}
+
+@utility section-label {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+}
+
+@layer components {
+  /* The fill comes from --fill, which Slider sets; browsers can't all style it otherwise. */
+  .slider {
+    --slider-color: var(--color-accent);
+    --thumb: 0.875rem;
+    --track: 3px;
+    appearance: none;
+    height: 1.25rem;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .slider::-webkit-slider-runnable-track {
+    height: var(--track);
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      var(--slider-color) var(--fill),
+      var(--color-line-strong) var(--fill)
+    );
+  }
+
+  .slider::-moz-range-track {
+    height: var(--track);
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      var(--slider-color) var(--fill),
+      var(--color-line-strong) var(--fill)
+    );
+  }
+
+  .slider::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--thumb);
+    height: var(--thumb);
+    margin-top: calc((var(--track) - var(--thumb)) / 2);
+    border: 3px solid var(--color-space);
+    border-radius: 50%;
+    background: var(--color-ink);
+    box-shadow: 0 0 0 1px var(--color-line-strong);
+  }
+
+  .slider::-moz-range-thumb {
+    box-sizing: border-box;
+    width: var(--thumb);
+    height: var(--thumb);
+    border: 3px solid var(--color-space);
+    border-radius: 50%;
+    background: var(--color-ink);
+    box-shadow: 0 0 0 1px var(--color-line-strong);
+  }
+
+  @media (pointer: coarse) {
+    .slider {
+      --thumb: 1.25rem;
+      height: 1.75rem;
+    }
+  }
 }

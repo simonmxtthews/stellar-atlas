@@ -75,11 +75,11 @@ test('every star within 100 ly and 50 routes hold the frame rate', async ({ page
   });
   await page.getByRole('button', { name: 'Replace this world' }).click();
   await page.getByRole('button', { name: 'World', exact: true }).click();
-  await page.getByLabel('Radius').fill('100');
+  await page.getByRole('slider', { name: 'Radius' }).fill('100');
   await expect(page.getByTestId('visible-count')).toContainText(/^4,\d{3} stars/);
-  await page.getByRole('button', { name: 'Routes' }).click();
+  await page.getByRole('button', { name: 'Routes', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Route panel' })).toContainText('Route 49');
-  await page.getByRole('button', { name: 'Routes' }).click();
+  await page.getByRole('button', { name: 'Routes', exact: true }).click();
   await page.waitForTimeout(2000);
 
   const idleFps = await sampleFps(page, SAMPLE_MS);
@@ -96,8 +96,8 @@ test('every star within 100 ly and 50 routes hold the frame rate', async ({ page
   const orbitFps = await orbiting;
 
   // Dragging the year, which moves every star, label and route.
-  await page.getByRole('button', { name: 'Probes' }).click();
-  const yearSlider = page.getByLabel('Map year');
+  await page.getByRole('button', { name: 'Probes', exact: true }).click();
+  const yearSlider = page.getByRole('slider', { name: 'Map year' });
   const dragging = sampleFps(page, SAMPLE_MS);
   const started = Date.now();
   for (let i = 1; Date.now() - started < SAMPLE_MS; i++) {

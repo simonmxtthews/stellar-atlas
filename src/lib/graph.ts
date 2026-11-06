@@ -117,7 +117,7 @@ export function connectedComponents(graph: JumpGraph): Components {
 
 // Golden-angle hues keep neighbouring ranks apart however many components there are.
 export function componentColor(rank: number): string {
-  return `hsl(${Math.round((200 + rank * 137.508) % 360)}, 75%, 62%)`;
+  return `hsl(${Math.round((200 + rank * 137.508) % 360)}, 60%, 68%)`;
 }
 
 interface QueueEntry {

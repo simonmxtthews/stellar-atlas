@@ -1,10 +1,11 @@
+import { ACCENT_COLOR } from '../lib/palette';
 import { DoubleSide } from 'three';
 import { galacticToScene } from '../lib/coords';
 import type { Catalogue } from '../store/catalogue';
 import { useUi } from '../store/ui';
 import { useMapShift } from './useMapShift';
 
-const SPHERE_COLOR = '#38bdf8';
+const SPHERE_COLOR = ACCENT_COLOR;
 
 // One translucent sphere around each selected system.
 export function RangeSpheres({ catalogue }: { readonly catalogue: Catalogue }) {
