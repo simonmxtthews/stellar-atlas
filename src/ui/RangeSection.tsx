@@ -5,7 +5,7 @@ import type { Catalogue } from '../store/catalogue';
 import { DEFAULT_RANGE_SPHERE_LY, useUi } from '../store/ui';
 import type { StarSystem } from '../types/catalogue';
 import { ModalSection } from './ModalSection';
-import { ResetButton } from './ResetButton';
+import { FieldHeading, ResetButton } from './ResetButton';
 import { Slider } from './Slider';
 
 const MIN_RANGE_LY = 1;
@@ -28,27 +28,28 @@ function RangeList({
   );
   return (
     <ModalSection title="Range sphere">
-      <div className="flex items-center gap-2">
-        <label className="flex min-w-0 flex-1 items-center gap-2 text-xs">
-          Radius
-          <Slider
-            aria-label="Range sphere radius"
-            min={MIN_RANGE_LY}
-            max={MAX_RANGE_LY}
-            step={1}
-            value={radiusLy}
-            onChange={(event) => setRangeSphere(Number(event.target.value))}
-            className="min-w-0 flex-1"
+      <FieldHeading
+        variant="field"
+        label="Radius"
+        value={`${radiusLy} ly`}
+        reset={
+          <ResetButton
+            name="range sphere radius"
+            to={`${DEFAULT_RANGE_SPHERE_LY} ly`}
+            isDefault={radiusLy === DEFAULT_RANGE_SPHERE_LY}
+            onReset={() => setRangeSphere(DEFAULT_RANGE_SPHERE_LY)}
           />
-          <span className="tabular-nums">{radiusLy} ly</span>
-        </label>
-        <ResetButton
-          name="range sphere radius"
-          to={`${DEFAULT_RANGE_SPHERE_LY} ly`}
-          isDefault={radiusLy === DEFAULT_RANGE_SPHERE_LY}
-          onReset={() => setRangeSphere(DEFAULT_RANGE_SPHERE_LY)}
-        />
-      </div>
+        }
+      />
+      <Slider
+        aria-label="Range sphere radius"
+        min={MIN_RANGE_LY}
+        max={MAX_RANGE_LY}
+        step={1}
+        value={radiusLy}
+        onChange={(event) => setRangeSphere(Number(event.target.value))}
+        className="block w-full"
+      />
       <p data-testid="range-count" className="mt-1 text-xs text-muted">
         {inside.length} system{inside.length === 1 ? '' : 's'} inside
       </p>

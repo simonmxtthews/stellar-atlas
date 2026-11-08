@@ -25,14 +25,13 @@ const meta = JSON.parse(
   readFileSync(new URL('../../public/data/meta.json', import.meta.url), 'utf8'),
 ) as CatalogueMeta;
 
-const PANEL_WIDTH_PX = 256;
 const MODAL_WIDTH_PX = 430;
 const PHONE_WIDTH_PX = 768; // below this, the controls and modal become sheets
 const MAP_TOP_PX = 340; // clear of the toolbar, its banners and a short list of search results
 const PHONE_MAP_TOP_PX = 290; // no search results reach down here on a phone
-const PHONE_SHEET_PX = 185; // the timeline, on top of the collapsed controls
-const TIMELINE_PX = 70;
-const FUTURE_NOTE_PX = 45; // what the timeline grows by, away from today
+const PHONE_SHEET_PX = 195; // the timeline, on top of the collapsed controls
+const MAP_BOTTOM_PX = 16; // the timeline is in the rail, so only the gutter
+const FUTURE_NOTE_PX = 25; // what the timeline grows by, away from today
 const MIN_STAR_GAP_PX = 20;
 const EMPTY_OFFSET_PX = 16; // a clear spot next to an isolated star
 const MOUSE_PICK_RADIUS_PX = 14;
@@ -63,6 +62,11 @@ function viewportOf(page: Page): { readonly width: number; readonly height: numb
 
 function isPhone(page: Page): boolean {
   return viewportOf(page).width < PHONE_WIDTH_PX;
+}
+
+// The left-hand rail and its gutter: a little wider on a wide screen.
+function panelWidth(page: Page): number {
+  return viewportOf(page).width >= 1024 ? 296 : 280;
 }
 
 // Phones start with the map controls collapsed, as they would otherwise cover the map.
@@ -161,9 +165,9 @@ function projectedStars(
 function isolatedStars(page: Page, keep?: (star: Star) => boolean): readonly StarOnScreen[] {
   const { width, height } = viewportOf(page);
   const phone = isPhone(page);
-  const left = phone ? 16 + EMPTY_OFFSET_PX : PANEL_WIDTH_PX + EMPTY_OFFSET_PX;
+  const left = phone ? 16 + EMPTY_OFFSET_PX : panelWidth(page) + EMPTY_OFFSET_PX;
   const right = phone ? width - 16 : width - MODAL_WIDTH_PX;
-  const bottom = height - (phone ? PHONE_SHEET_PX : TIMELINE_PX);
+  const bottom = height - (phone ? PHONE_SHEET_PX : MAP_BOTTOM_PX);
   const projected = projectedStars(page, keep);
   return projected.filter(
     (a) =>
@@ -333,7 +337,7 @@ test('click selects with a pulsing ring and the modal; shift-click adds; Esc and
   await page.mouse.click(first.x, first.y);
   await expect(dialog.getByRole('heading', { level: 2 })).toHaveText(first.star.displayName);
   await expect(count).toHaveText('1 system selected');
-  await page.mouse.move(PANEL_WIDTH_PX + 10, 8); // no tooltip over the ring
+  await page.mouse.move(panelWidth(page) + 10, 8); // no tooltip over the ring
   const ringed = await page.screenshot(aroundFirst);
   await expectChanged(page, ringed, before);
   await expect
@@ -1154,7 +1158,8 @@ test('the year slider moves the map, while the figures and filters stay as of to
   await page.getByRole('slider', { name: 'Map year' }).fill(String(yearsAhead));
   await page.getByRole('button', { name: 'Probes', exact: true }).click();
   const year = new Date().getFullYear() + yearsAhead;
-  await expect(banner).toHaveText(`Showing AD ${year.toLocaleString('en')}`);
+  await expect(banner).toHaveText('Stars have moved.');
+  await expect(page.getByTestId('global-year')).toHaveValue(String(year));
   await expect(page.getByTestId('orbit-target')).toHaveText('Orbit target: Sol');
   expect(await visibleStars(page)).toBe(count);
   await restPointer(page);
@@ -1179,10 +1184,10 @@ test('the year slider moves the map, while the figures and filters stay as of to
     (a) =>
       a.star.id !== 'hyg:0' &&
       systems.find((system) => system.id === a.star.systemId)?.motion?.radialKnown &&
-      a.x > (isPhone(page) ? 32 : PANEL_WIDTH_PX) &&
+      a.x > (isPhone(page) ? 32 : panelWidth(page)) &&
       a.x < width - (isPhone(page) ? 16 : MODAL_WIDTH_PX) &&
       a.y > MAP_TOP_PX + 100 &&
-      a.y < height - (isPhone(page) ? PHONE_SHEET_PX : TIMELINE_PX) - FUTURE_NOTE_PX &&
+      a.y < height - (isPhone(page) ? PHONE_SHEET_PX : MAP_BOTTOM_PX) - FUTURE_NOTE_PX &&
       visibleNow.every((b) => b === a || Math.hypot(a.x - b.x, a.y - b.y) > MIN_STAR_GAP_PX),
   );
   if (!pick) throw new Error('No isolated moved star on screen');
@@ -1248,9 +1253,9 @@ test('the timeline is always on hand, and both year sliders stay in step', async
   const slider = timeline.getByRole('slider', { name: 'Map year' });
   const before = await slider.boundingBox();
   await slider.fill('20000');
-  await expect(timeline.getByTestId('global-year')).toHaveText(String(thisYear + 20_000));
+  await expect(timeline.getByTestId('global-year')).toHaveValue(String(thisYear + 20_000));
   await expect(page.getByTestId('map-year')).toBeVisible();
-  // The note appears above it, or the slider would jump out from under a drag.
+  // The note pushes upwards, or the slider would jump out from under a drag.
   expect((await slider.boundingBox())?.y).toBe(before?.y);
 
   await page.getByRole('button', { name: 'Probes', exact: true }).click();
@@ -1265,6 +1270,27 @@ test('the timeline is always on hand, and both year sliders stay in step', async
   await expect(page.getByTestId('map-year')).toHaveCount(0);
   await expect(reset).toBeDisabled();
   await page.getByRole('button', { name: 'Probes', exact: true }).click();
+
+  // The year can be typed: any year the slider reaches, exactly; anything else is turned down.
+  const field = timeline.getByTestId('global-year');
+  await field.fill(String(thisYear + 974));
+  await field.press('Enter');
+  await expect(field).not.toBeFocused();
+  await expect(field).toHaveValue(String(thisYear + 974));
+  await expect(slider).not.toHaveValue('0');
+  await expect(page.getByTestId('map-year')).toBeVisible();
+  for (const bad of [String(thisYear - 1), String(thisYear + 100_001), 'soon']) {
+    await field.fill(bad);
+    await expect(field).toHaveAttribute('aria-invalid', 'true');
+    await field.press('Enter');
+    await expect(field).toHaveValue(String(thisYear + 974));
+  }
+  // Esc drops an edit, and leaves the map's own Esc alone.
+  await field.fill(String(thisYear + 50_000));
+  await field.press('Escape');
+  await expect(field).toHaveValue(String(thisYear + 974));
+  await reset.click();
+  await expect(field).toHaveValue(String(thisYear));
 
   // On a wide screen it makes way for the star details, rather than going behind them.
   if (viewportOf(page).width >= 1024) {
@@ -1397,9 +1423,7 @@ test('every setting resets to its default, and a reset of the world can be undon
 test.describe('touch', () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
-  test('tap selects into a full-screen sheet; long-press shows the tooltip instead', async ({
-    page,
-  }) => {
+  test('tap selects into a sheet; long-press shows the tooltip instead', async ({ page }) => {
     await openMap(page);
     const projected = projectedStars(page);
     const target = projected.find(
@@ -1424,8 +1448,54 @@ test.describe('touch', () => {
     const dialog = page.getByRole('dialog', { name: target.star.displayName });
     await expect(dialog).toBeVisible();
     await expect(page.getByTestId('star-tooltip')).toHaveCount(0);
+    // A sheet up to just below the search row, which leaves the interface toggle uncovered.
     const box = await dialog.boundingBox();
     expect(box?.width).toBe(390);
-    expect(box?.height).toBe(844);
+    expect(box?.y).toBe(66);
+    expect((box?.y ?? 0) + (box?.height ?? 0)).toBe(844);
   });
+});
+
+test('the interface toggle hides every panel and brings them back as they were', async ({
+  page,
+}) => {
+  await openMap(page);
+  const hide = page.getByRole('button', { name: 'Hide interface (U)' });
+  const show = page.getByRole('button', { name: 'Show interface (U)' });
+  const timeline = page.getByRole('group', { name: 'Timeline' });
+  const search = page.getByRole('combobox', { name: 'Search stars' });
+  const toolbar = page.getByRole('toolbar', { name: 'World tools' });
+  const controls = page.getByRole('complementary', { name: 'Map controls' });
+
+  await search.fill('Vega');
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Vega' });
+  await expect(dialog).toBeVisible();
+  await page.getByRole('slider', { name: 'Map year' }).fill('20000');
+
+  await hide.click();
+  for (const panel of [timeline, search, toolbar, controls, dialog]) {
+    await expect(panel).toBeHidden();
+  }
+  // The toggle itself stays, as the way back.
+  await expect(show).toBeVisible();
+  await expect(show).toHaveAttribute('aria-pressed', 'true');
+
+  await page.keyboard.press('u');
+  await expect(hide).toBeVisible();
+  for (const panel of [timeline, search, toolbar, controls, dialog]) {
+    await expect(panel).toBeVisible();
+  }
+  await expect(page.getByRole('slider', { name: 'Map year' })).toHaveValue('20000');
+
+  // Starting a tool or a search brings a hidden interface back, rather than working unseen.
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('u');
+  await expect(show).toBeVisible();
+  await page.keyboard.press('r');
+  await expect(page.getByRole('status', { name: 'Route mode' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('u');
+  await page.keyboard.press('/');
+  await expect(search).toBeFocused();
 });

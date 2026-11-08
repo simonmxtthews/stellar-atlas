@@ -48,6 +48,30 @@ input[type='radio'] {
   accent-color: var(--color-accent);
 }
 
+/* Tailwind's reset gives buttons the default arrow; anything that can be clicked gets the hand,
+   and anything switched off keeps the arrow. */
+@layer base {
+  button,
+  select,
+  summary,
+  label:has(input:not([type='text'], [type='search'], [type='number'])),
+  [role='button'],
+  [role='tab'],
+  [role='option'],
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='color'],
+  input[type='range'],
+  input[type='file'] {
+    cursor: pointer;
+  }
+
+  :is(button, select, input):disabled,
+  [aria-disabled='true'] {
+    cursor: default;
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 1px;

@@ -1,0 +1,6 @@
+<!-- Stellar Atlas: the Sun among the pulsar lines of the Pioneer and Voyager pulsar map, with
+     its long line to the galactic centre. Drawn in currentColor: set `color` to recolour. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" color="#ecebe6">
+  <circle cx="23" cy="32" r="5" fill="currentColor"/>
+  <path d="M32.5 32L61.4 32M30.277 25.894L37.555 19.787M24.65 22.644L27.081 8.857M18.25 23.773L15.75 19.443M14.073 28.751L0.917 23.963M14.073 35.249L5.146 38.498M18.25 40.227L11.25 52.352M24.65 41.356L25.518 46.28M30.277 38.106L37.555 44.213" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/>
+</svg>

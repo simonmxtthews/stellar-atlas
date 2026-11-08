@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { formatValue } from '../lib/starFacts';
 import {
   DEFAULT_ACCEL_G,
@@ -10,8 +10,8 @@ import {
 } from '../lib/travel';
 import { useWorld } from '../store/world';
 import type { DriveModel } from '../types/world';
-import { FIELD_LABEL_CLASS, INPUT_CLASS } from './controlStyles';
-import { ResetButton } from './ResetButton';
+import { INPUT_CLASS } from './controlStyles';
+import { FieldHeading, ResetButton } from './ResetButton';
 
 const MAX_JUMP_LIMIT_LY = 50; // beyond this the network is nearly every pair in the catalogue
 const DEFAULT_CALCULATOR_LY = 4.37; // Alpha Centauri
@@ -45,34 +45,41 @@ function NumberField({
   readonly field?: string; // typing in it makes one undo step; a reset is always its own
   readonly onCommit: (value: number, field?: string) => void;
 }) {
+  const id = useId();
   const [draft, setDraft] = useState<string | null>(null);
   const invalid = draft !== null && (draft.trim() === '' || !isValid(Number(draft)));
   return (
-    <div className="mt-2 flex items-end gap-1">
-      <label className="block min-w-0 flex-1">
-        <span className={FIELD_LABEL_CLASS}>{label}</span>
-        <input
-          type="number"
-          step={step}
-          aria-invalid={invalid}
-          value={draft ?? value}
-          onChange={(event) => {
-            const text = event.target.value;
-            setDraft(text);
-            if (text.trim() !== '' && isValid(Number(text))) onCommit(Number(text), field);
-          }}
-          onBlur={() => setDraft(null)}
-          className={`${INPUT_CLASS} tabular-nums aria-invalid:border-danger`}
-        />
-      </label>
-      <ResetButton
-        name={label}
-        to={String(defaultValue)}
-        isDefault={value === defaultValue}
-        onReset={() => {
-          setDraft(null);
-          onCommit(defaultValue);
+    <div className="mt-2">
+      <FieldHeading
+        variant="field"
+        className="mb-0.5"
+        label={label}
+        htmlFor={id}
+        reset={
+          <ResetButton
+            name={label}
+            to={String(defaultValue)}
+            isDefault={value === defaultValue}
+            onReset={() => {
+              setDraft(null);
+              onCommit(defaultValue);
+            }}
+          />
+        }
+      />
+      <input
+        id={id}
+        type="number"
+        step={step}
+        aria-invalid={invalid}
+        value={draft ?? value}
+        onChange={(event) => {
+          const text = event.target.value;
+          setDraft(text);
+          if (text.trim() !== '' && isValid(Number(text))) onCommit(Number(text), field);
         }}
+        onBlur={() => setDraft(null)}
+        className={`${INPUT_CLASS} tabular-nums aria-invalid:border-danger`}
       />
     </div>
   );
@@ -125,21 +132,21 @@ function DriveFields({
       const { accelG } = drive;
       return (
         <>
-          <label className="mt-2 flex items-center gap-1 text-xs">
-            <input
-              type="checkbox"
-              checked={accelG !== undefined}
-              onChange={() =>
-                setDrive(
-                  accelG === undefined
-                    ? { ...drive, accelG: DEFAULT_ACCEL_G }
-                    : { type: 'sublight', fractionC: drive.fractionC },
-                )
-              }
-            />
-            Constant acceleration, flip at midpoint
-          </label>
-          <div className="mt-1">
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <label className="flex items-center gap-1 text-xs">
+              <input
+                type="checkbox"
+                checked={accelG !== undefined}
+                onChange={() =>
+                  setDrive(
+                    accelG === undefined
+                      ? { ...drive, accelG: DEFAULT_ACCEL_G }
+                      : { type: 'sublight', fractionC: drive.fractionC },
+                  )
+                }
+              />
+              Constant acceleration, flip at midpoint
+            </label>
             <ResetButton
               name="constant acceleration"
               to="off"
@@ -186,33 +193,38 @@ export function TravelCalculator() {
   const drive = useWorld((state) => state.world.drive);
   const setDrive = useWorld((state) => state.setDrive);
   const [distanceLy, setDistanceLy] = useState(DEFAULT_CALCULATOR_LY);
+  const driveId = useId();
   return (
     <>
-      <div className="flex items-end gap-1">
-        <label className="block min-w-0 flex-1">
-          <span className={FIELD_LABEL_CLASS}>Drive model</span>
-          <select
-            value={drive.type}
-            onChange={(event) => {
-              const type = event.target.value;
-              if (isDriveType(type)) setDrive(DRIVE_DEFAULTS[type]);
-            }}
-            className={INPUT_CLASS}
-          >
-            {Object.entries(DRIVE_LABELS).map(([type, label]) => (
-              <option key={type} value={type}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <ResetButton
-          name="the whole drive"
-          to="a jump drive's defaults"
-          isDefault={JSON.stringify(drive) === JSON.stringify(DEFAULT_DRIVE)}
-          onReset={() => setDrive(DEFAULT_DRIVE)}
-        />
-      </div>
+      <FieldHeading
+        variant="field"
+        className="mb-0.5"
+        label="Drive model"
+        htmlFor={driveId}
+        reset={
+          <ResetButton
+            name="the whole drive"
+            to="a jump drive's defaults"
+            isDefault={JSON.stringify(drive) === JSON.stringify(DEFAULT_DRIVE)}
+            onReset={() => setDrive(DEFAULT_DRIVE)}
+          />
+        }
+      />
+      <select
+        id={driveId}
+        value={drive.type}
+        onChange={(event) => {
+          const type = event.target.value;
+          if (isDriveType(type)) setDrive(DRIVE_DEFAULTS[type]);
+        }}
+        className={INPUT_CLASS}
+      >
+        {Object.entries(DRIVE_LABELS).map(([type, label]) => (
+          <option key={type} value={type}>
+            {label}
+          </option>
+        ))}
+      </select>
       <DriveFields drive={drive} setDrive={setDrive} />
 
       <h2 className="mt-3 section-label">Travel calculator</h2>

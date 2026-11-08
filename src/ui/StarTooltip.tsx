@@ -12,8 +12,9 @@ export function StarTooltip({ catalogue }: { readonly catalogue: Catalogue }) {
   const hover = useUi((state) => state.hover);
   const referenceStarId = useUi((state) => state.referenceStarId);
   const starMeta = useWorld((state) => state.world.starMeta);
+  const chromeHidden = useUi((state) => state.chromeHidden);
   const star = hover && catalogue.starsById.get(hover.starId);
-  if (!hover || !star) return null;
+  if (!hover || !star || chromeHidden) return null;
   const reference = catalogue.starsById.get(referenceStarId);
   const flipX = hover.x > window.innerWidth - FLIP_MARGIN_PX;
   return (

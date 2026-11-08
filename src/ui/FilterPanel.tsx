@@ -2,9 +2,16 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { DEFAULT_FILTERS, MAX_RADIUS_LY, MIN_RADIUS_LY, SOL_ID } from '../lib/filters';
 import { DEFAULT_OVERLAYS, useUi, type Overlays } from '../store/ui';
 import type { SpectralClass, Star } from '../types/catalogue';
+import { Logo } from './Logo';
+import { Wordmark } from './Wordmark';
 import { RegionLegend } from './RegionLegend';
-import { ResetButton } from './ResetButton';
+import { FieldHeading, ResetButton } from './ResetButton';
 import { Slider } from './Slider';
+import { TimelineBar } from './YearControl';
+
+// The rail's top sits one gutter below the search box (0.75rem + 2.375rem + 0.75rem).
+const RAIL_CLASS =
+  'absolute top-[3.875rem] left-3 flex max-h-[calc(100dvh-4.625rem)] w-64 flex-col lg:w-68 overflow-hidden rounded-xl border border-line bg-panel text-sm text-ink shadow-panel backdrop-blur max-md:static max-md:max-h-none max-md:w-auto max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0';
 
 const CLASS_LABELS: readonly (readonly [SpectralClass, string, string])[] = [
   ['O', 'O', '#9bb0ff'],
@@ -64,9 +71,8 @@ function Section({
 }) {
   return (
     <fieldset className="mt-3">
-      <legend className="mb-1 flex w-full items-center justify-between text-xs">
-        <span className="section-label">{title}</span>
-        {reset}
+      <legend className="mb-1 w-full">
+        <FieldHeading label={title} reset={reset} />
       </legend>
       {children}
     </fieldset>
@@ -101,82 +107,91 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
   const reference = stars.find((star) => star.id === referenceStarId);
 
   return (
-    <aside
-      aria-label="Map controls"
-      className="absolute top-16 left-3 w-60 rounded-xl border border-line shadow-panel bg-panel p-3 text-sm text-ink backdrop-blur max-md:static max-md:w-auto max-md:rounded-none"
-    >
-      <div className="flex items-center justify-between gap-2">
-        <h1 className="font-medium tracking-tight">Stellar Atlas</h1>
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-          className="rounded px-2 py-0.5 text-xs text-muted hover:bg-raised"
-        >
-          {open ? 'Hide' : 'Show'}
-        </button>
-      </div>
-      <p data-testid="visible-count" className="mt-1 text-xs text-muted">
-        {visible.stars.toLocaleString('en')} stars in {visible.systems.toLocaleString('en')} systems
-      </p>
-      <p data-testid="orbit-target" className="text-xs text-muted">
-        Orbit target: {orbitStar?.displayName ?? 'free'}
-      </p>
-      {reference && reference.id !== SOL_ID && (
-        <p className="flex items-center justify-between text-xs text-warn">
-          <span data-testid="reference-star">Distances from {reference.displayName}</span>
+    // A rail down the left: under the search box, and the full height of the screen while open,
+    // so the timeline at its foot keeps to the corner. On a phone it's the bottom sheet instead,
+    // with the timeline on top where a thumb reaches it.
+    <aside aria-label="Map controls" className={`${RAIL_CLASS} ${open ? 'md:bottom-3' : ''}`}>
+      <div className="shrink-0 px-3 pt-3 pb-3">
+        <div className="flex items-center justify-between gap-2">
+          {/* The lockup: the mark, then the wordmark; the heading's text is for screen readers. */}
+          <h1 className="flex items-center gap-2.5 text-ink">
+            <Logo size={26} />
+            <Wordmark height={10} />
+            <span className="sr-only">Stellar Atlas</span>
+          </h1>
           <button
             type="button"
-            onClick={() => setReference(SOL_ID)}
-            className="rounded px-2 py-0.5 text-muted hover:bg-raised"
+            aria-expanded={open}
+            onClick={() => setOpen(!open)}
+            className="rounded px-2 py-0.5 text-xs text-muted hover:bg-raised"
           >
-            Back to Sol
+            {open ? 'Hide' : 'Show'}
           </button>
+        </div>
+        <p data-testid="visible-count" className="mt-1 text-xs text-muted">
+          {visible.stars.toLocaleString('en')} stars in {visible.systems.toLocaleString('en')}{' '}
+          systems
         </p>
-      )}
-      <p data-testid="label-count" className="text-xs text-muted">
-        {labelCount} labels
-      </p>
-      {selectedCount > 0 && (
-        <p className="flex items-center justify-between text-xs text-ink-soft">
-          <span data-testid="selection-count">
-            {selectedCount} system{selectedCount === 1 ? '' : 's'} selected
-          </span>
-          <button
-            type="button"
-            onClick={clearSelection}
-            className="rounded px-2 py-0.5 text-muted hover:bg-raised"
-          >
-            Clear
-          </button>
+        <p data-testid="orbit-target" className="text-xs text-muted">
+          Orbit target: {orbitStar?.displayName ?? 'free'}
         </p>
-      )}
+        {reference && reference.id !== SOL_ID && (
+          <p className="flex items-center justify-between text-xs text-warn">
+            <span data-testid="reference-star">Distances from {reference.displayName}</span>
+            <button
+              type="button"
+              onClick={() => setReference(SOL_ID)}
+              className="rounded px-2 py-0.5 text-muted hover:bg-raised"
+            >
+              Back to Sol
+            </button>
+          </p>
+        )}
+        <p data-testid="label-count" className="text-xs text-muted">
+          {labelCount} labels
+        </p>
+        {selectedCount > 0 && (
+          <p className="flex items-center justify-between text-xs text-ink-soft">
+            <span data-testid="selection-count">
+              {selectedCount} system{selectedCount === 1 ? '' : 's'} selected
+            </span>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="rounded px-2 py-0.5 text-muted hover:bg-raised"
+            >
+              Clear
+            </button>
+          </p>
+        )}
 
-      <RegionLegend />
+        <RegionLegend />
+      </div>
 
       {open && (
-        <div className="max-h-[calc(100dvh-14rem)] overflow-y-auto max-md:max-h-[45dvh]">
-          <div className="mt-3 flex items-end gap-2">
-            <label className="min-w-0 flex-1">
-              <span className="flex justify-between section-label">
-                Radius <span className="tracking-normal normal-case">{filters.radiusLy} ly</span>
-              </span>
-              <Slider
-                aria-label="Radius"
-                min={MIN_RADIUS_LY}
-                // Away from Sol, the far side of the catalogue is further off than its radius.
-                max={MAX_RADIUS_LY + Math.ceil(reference?.distLy ?? 0)}
-                step={1}
-                value={filters.radiusLy}
-                onChange={(event) => setFilters({ radiusLy: Number(event.target.value) })}
-                className="w-full"
-              />
-            </label>
-            <ResetButton
-              name="radius"
-              to={`${DEFAULT_FILTERS.radiusLy} ly`}
-              isDefault={filters.radiusLy === DEFAULT_FILTERS.radiusLy}
-              onReset={() => setFilters({ radiusLy: DEFAULT_FILTERS.radiusLy })}
+        <div className="min-h-0 flex-1 overflow-y-auto border-t border-hairline px-3 pt-1 pb-4 [mask-image:linear-gradient(to_bottom,black_calc(100%-1rem),transparent)] max-md:max-h-[45dvh]">
+          <div className="mt-2">
+            <FieldHeading
+              label="Radius"
+              value={`${filters.radiusLy} ly`}
+              reset={
+                <ResetButton
+                  name="radius"
+                  to={`${DEFAULT_FILTERS.radiusLy} ly`}
+                  isDefault={filters.radiusLy === DEFAULT_FILTERS.radiusLy}
+                  onReset={() => setFilters({ radiusLy: DEFAULT_FILTERS.radiusLy })}
+                />
+              }
+            />
+            <Slider
+              aria-label="Radius"
+              min={MIN_RADIUS_LY}
+              // Away from Sol, the far side of the catalogue is further off than its radius.
+              max={MAX_RADIUS_LY + Math.ceil(reference?.distLy ?? 0)}
+              step={1}
+              value={filters.radiusLy}
+              onChange={(event) => setFilters({ radiusLy: Number(event.target.value) })}
+              className="block w-full"
             />
           </div>
 
@@ -267,6 +282,10 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
           </p>
         </div>
       )}
+
+      <div className="shrink-0 border-t border-line max-md:order-first max-md:border-t-0 max-md:border-b">
+        <TimelineBar />
+      </div>
     </aside>
   );
 }
