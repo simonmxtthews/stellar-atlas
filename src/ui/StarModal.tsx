@@ -199,6 +199,7 @@ export function StarModal({ catalogue }: { readonly catalogue: Catalogue }) {
   const showStar = useUi((state) => state.showStar);
   const starMeta = useWorld((state) => state.world.starMeta);
   const referenceStarId = useUi((state) => state.referenceStarId);
+  const chromeHidden = useUi((state) => state.chromeHidden);
 
   const system = detail && catalogue.systemsById.get(detail.systemId);
   const members = system?.starIds.flatMap((id) => catalogue.starsById.get(id) ?? []) ?? [];
@@ -218,7 +219,11 @@ export function StarModal({ catalogue }: { readonly catalogue: Catalogue }) {
           onCloseAutoFocus={(event) => event.preventDefault()}
           onEscapeKeyDown={(event) => event.preventDefault()}
           onInteractOutside={(event) => event.preventDefault()}
-          className="fixed top-3 right-3 bottom-3 z-10 w-[26rem] overflow-y-auto rounded-xl border border-line shadow-panel bg-panel p-4 text-sm text-ink backdrop-blur max-md:inset-0 max-md:w-auto max-md:rounded-none"
+          // Hidden with the rest of the interface, but kept, so its drafts survive.
+          hidden={chromeHidden}
+          // Starts one gutter below the top row, level with the rail on the left; below 1024 px the
+          // toolbar wraps onto two lines, so it starts one gutter below that instead.
+          className="fixed top-[3.875rem] right-3 max-lg:top-[5.9375rem] bottom-3 z-10 w-[26rem] overflow-y-auto rounded-xl border border-line shadow-panel bg-panel p-4 text-sm text-ink backdrop-blur max-md:inset-x-0 max-md:top-[4.125rem] max-md:bottom-0 max-md:w-auto max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0"
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">

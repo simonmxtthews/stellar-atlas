@@ -13,7 +13,7 @@ import { useUi } from '../store/ui';
 import { ROUTE_DEFAULTS, useWorld } from '../store/world';
 import { ROUTE_KINDS, type Route, type RouteKind } from '../types/world';
 import { BUTTON_CLASS, FIELD_LABEL_CLASS, INPUT_CLASS } from './controlStyles';
-import { ResetButton } from './ResetButton';
+import { FieldHeading, ResetButton } from './ResetButton';
 import { Slider } from './Slider';
 
 const MIN_WIDTH = 1;
@@ -104,9 +104,23 @@ function RouteEditor({
         />
       </label>
       <div className="mt-2 flex items-end gap-2">
-        <label className="min-w-0 flex-1">
-          <span className={FIELD_LABEL_CLASS}>Kind</span>
+        <div className="min-w-0 flex-1">
+          <FieldHeading
+            variant="field"
+            className="mb-0.5"
+            label="Kind"
+            htmlFor={`${route.id}-kind`}
+            reset={
+              <ResetButton
+                name="kind"
+                to={ROUTE_DEFAULTS.kind}
+                isDefault={route.kind === ROUTE_DEFAULTS.kind}
+                onReset={() => updateRoute(route.id, { kind: ROUTE_DEFAULTS.kind })}
+              />
+            }
+          />
           <select
+            id={`${route.id}-kind`}
             value={route.kind}
             onChange={(event) => updateRoute(route.id, { kind: event.target.value as RouteKind })}
             className={`${INPUT_CLASS} capitalize`}
@@ -117,24 +131,24 @@ function RouteEditor({
               </option>
             ))}
           </select>
-        </label>
-        <ResetButton
-          name="kind"
-          to={ROUTE_DEFAULTS.kind}
-          isDefault={route.kind === ROUTE_DEFAULTS.kind}
-          onReset={() => updateRoute(route.id, { kind: ROUTE_DEFAULTS.kind })}
-        />
-        <label>
-          <span className={FIELD_LABEL_CLASS}>Colour</span>
+        </div>
+        <div>
+          <FieldHeading
+            variant="field"
+            className="mb-0.5"
+            label="Colour"
+            htmlFor={`${route.id}-colour`}
+          />
           <input
+            id={`${route.id}-colour`}
             type="color"
             value={route.color}
             onChange={(event) => updateRoute(route.id, { color: event.target.value }, 'color')}
             className="block h-7 w-10 rounded-md border border-line bg-field"
           />
-        </label>
+        </div>
       </div>
-      <div className="mt-2 flex items-center gap-3">
+      <div className="mt-2 flex items-center justify-between gap-2">
         <label className="flex items-center gap-1 text-xs">
           <input
             type="checkbox"
@@ -149,24 +163,31 @@ function RouteEditor({
           isDefault={route.dashed === ROUTE_DEFAULTS.dashed}
           onReset={() => updateRoute(route.id, { dashed: ROUTE_DEFAULTS.dashed })}
         />
-        <label className="flex flex-1 items-center gap-2 text-xs">
-          Width
-          <Slider
-            min={MIN_WIDTH}
-            max={MAX_WIDTH}
-            step={0.5}
-            value={route.width}
-            onChange={(event) =>
-              updateRoute(route.id, { width: Number(event.target.value) }, 'width')
-            }
-            className="min-w-0 flex-1"
-          />
-        </label>
-        <ResetButton
-          name="width"
-          to={String(ROUTE_DEFAULTS.width)}
-          isDefault={route.width === ROUTE_DEFAULTS.width}
-          onReset={() => updateRoute(route.id, { width: ROUTE_DEFAULTS.width })}
+      </div>
+      <div className="mt-2">
+        <FieldHeading
+          variant="field"
+          label="Width"
+          value={route.width}
+          reset={
+            <ResetButton
+              name="width"
+              to={String(ROUTE_DEFAULTS.width)}
+              isDefault={route.width === ROUTE_DEFAULTS.width}
+              onReset={() => updateRoute(route.id, { width: ROUTE_DEFAULTS.width })}
+            />
+          }
+        />
+        <Slider
+          aria-label="Width"
+          min={MIN_WIDTH}
+          max={MAX_WIDTH}
+          step={0.5}
+          value={route.width}
+          onChange={(event) =>
+            updateRoute(route.id, { width: Number(event.target.value) }, 'width')
+          }
+          className="block w-full"
         />
       </div>
       <label className="mt-2 block">

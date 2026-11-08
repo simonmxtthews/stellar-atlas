@@ -8,12 +8,12 @@ import { systemAnchors } from './scene/systemAnchors';
 import { useCatalogue, type Catalogue } from './store/catalogue';
 import { useUi } from './store/ui';
 import { useWorld } from './store/world';
+import { ChromeToggle } from './ui/ChromeToggle';
 import { FilterPanel } from './ui/FilterPanel';
 import { SearchBar } from './ui/SearchBar';
 import { StarModal } from './ui/StarModal';
 import { StarTooltip } from './ui/StarTooltip';
 import { Toolbar } from './ui/Toolbar';
-import { TimelineBar } from './ui/YearControl';
 
 const CAMERA = {
   fov: CAMERA_FOV,
@@ -57,6 +57,7 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
   );
   const visibleSystems = useMemo(() => anchors.map(({ system }) => system), [anchors]);
   const visible = useMemo(() => countVisible(catalogue.stars, mask), [catalogue, mask]);
+  const chromeHidden = useUi((state) => state.chromeHidden);
   return (
     <>
       <Canvas camera={CAMERA} gl={GL}>
@@ -67,15 +68,18 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
           visibleSystems={visibleSystems}
         />
       </Canvas>
-      {/* Stacked into one sheet on a phone; placed apart on a wide screen. */}
-      <div className="md:contents max-md:absolute max-md:inset-x-0 max-md:bottom-0">
-        <TimelineBar />
-        <FilterPanel stars={catalogue.stars} visible={visible} />
+      {/* Hidden rather than unmounted, so the panels keep their state for when they come back. */}
+      <div hidden={chromeHidden} className="contents">
+        {/* A rail on a wide screen; a sheet along the foot of a phone. */}
+        <div className="md:contents max-md:absolute max-md:inset-x-0 max-md:bottom-0">
+          <FilterPanel stars={catalogue.stars} visible={visible} />
+        </div>
+        <Toolbar catalogue={catalogue} visibleSystems={visibleSystems} />
+        <SearchBar catalogue={catalogue} />
       </div>
-      <Toolbar catalogue={catalogue} visibleSystems={visibleSystems} />
-      <SearchBar catalogue={catalogue} />
       <StarTooltip catalogue={catalogue} />
       <StarModal catalogue={catalogue} />
+      <ChromeToggle />
     </>
   );
 }

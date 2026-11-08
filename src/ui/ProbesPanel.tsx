@@ -6,7 +6,7 @@ import { formatValue } from '../lib/starFacts';
 import type { Catalogue } from '../store/catalogue';
 import { DEFAULT_OVERLAYS, useUi } from '../store/ui';
 import type { Probe } from '../types/catalogue';
-import { ResetButton } from './ResetButton';
+import { FieldHeading, ResetButton } from './ResetButton';
 import { Slider } from './Slider';
 import { YearControl } from './YearControl';
 
@@ -100,6 +100,21 @@ export function ProbesPanel({ catalogue }: { readonly catalogue: Catalogue }) {
   const year = thisYear + yearsAhead;
   return (
     <>
+      <FieldHeading
+        label="Display"
+        className="mb-1"
+        reset={
+          <ResetButton
+            name="probe and pulsar display"
+            to="off"
+            isDefault={
+              overlays.probes === DEFAULT_OVERLAYS.probes &&
+              overlays.pulsars === DEFAULT_OVERLAYS.pulsars
+            }
+            onReset={() => resetOverlays(['probes', 'pulsars'])}
+          />
+        }
+      />
       <label className="flex items-center gap-2 text-xs">
         <input type="checkbox" checked={overlays.probes} onChange={() => toggleOverlay('probes')} />
         Show probe trajectories
@@ -112,17 +127,6 @@ export function ProbesPanel({ catalogue }: { readonly catalogue: Catalogue }) {
         />
         Show pulsar map (Golden Record periods)
       </label>
-      <div className="mt-1">
-        <ResetButton
-          name="probe and pulsar display"
-          to="off"
-          isDefault={
-            overlays.probes === DEFAULT_OVERLAYS.probes &&
-            overlays.pulsars === DEFAULT_OVERLAYS.pulsars
-          }
-          onReset={() => resetOverlays(['probes', 'pulsars'])}
-        />
-      </div>
 
       <div className="mt-3">
         <YearControl sliderName="Probe year" testId="probe-year" />
@@ -159,27 +163,29 @@ export function ProbesPanel({ catalogue }: { readonly catalogue: Catalogue }) {
       </table>
 
       <h2 className="mt-3 section-label">Closest approaches</h2>
-      <label className="mt-1 flex items-center gap-2 text-xs">
-        Within
-        <Slider
-          aria-label="Approach distance"
-          min={MIN_APPROACH_LY}
-          max={MAX_APPROACH_LY}
-          step={0.5}
-          value={withinLy}
-          onChange={(event) => setWithinLy(Number(event.target.value))}
-          className="min-w-0 flex-1"
-        />
-        <span className="tabular-nums">{withinLy} ly</span>
-      </label>
-      <div className="mt-1">
-        <ResetButton
-          name="approach distance"
-          to={`${DEFAULT_APPROACH_LY} ly`}
-          isDefault={withinLy === DEFAULT_APPROACH_LY}
-          onReset={() => setWithinLy(DEFAULT_APPROACH_LY)}
-        />
-      </div>
+      <FieldHeading
+        variant="field"
+        label="Within"
+        className="mt-1"
+        value={`${withinLy} ly`}
+        reset={
+          <ResetButton
+            name="approach distance"
+            to={`${DEFAULT_APPROACH_LY} ly`}
+            isDefault={withinLy === DEFAULT_APPROACH_LY}
+            onReset={() => setWithinLy(DEFAULT_APPROACH_LY)}
+          />
+        }
+      />
+      <Slider
+        aria-label="Approach distance"
+        min={MIN_APPROACH_LY}
+        max={MAX_APPROACH_LY}
+        step={0.5}
+        value={withinLy}
+        onChange={(event) => setWithinLy(Number(event.target.value))}
+        className="block w-full"
+      />
       <p data-testid="approach-note" className="mt-1 text-xs text-muted">
         Over the next {MAX_YEARS_AHEAD.toLocaleString('en')} years, with each star moving in a
         straight line at its catalogue velocity. ≈ marks a star with no radial velocity or no motion

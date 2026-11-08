@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { galacticToScene } from '../../../src/lib/coords';
 import { closestApproaches, probePositionAt } from '../../../src/lib/probes';
-import { movedPosition, movedScenePositions, yearsFromCatalogue } from '../../../src/lib/mapTime';
+import {
+  movedPosition,
+  movedScenePositions,
+  yearsAheadOf,
+  yearsFromCatalogue,
+} from '../../../src/lib/mapTime';
 import { distanceLy } from '../../../src/lib/routes';
 import type { Probe } from '../../../src/types/catalogue';
 import { starOf, systemOf } from './fixtures';
@@ -83,5 +88,24 @@ describe('the map and the approach table', () => {
         movedPosition(star.pos, system.motion, years),
       ),
     ).toBeCloseTo(approach.distanceLy, 6);
+  });
+});
+
+describe('yearsAheadOf', () => {
+  it('takes any whole year the timeline spans, exactly', () => {
+    expect(yearsAheadOf('2026', 2026)).toBe(0);
+    expect(yearsAheadOf('3000', 2026)).toBe(974);
+    expect(yearsAheadOf('102026', 2026)).toBe(100_000);
+  });
+
+  it('allows spaces, thousands separators and an AD', () => {
+    expect(yearsAheadOf(' 42,026 ', 2026)).toBe(40_000);
+    expect(yearsAheadOf('AD 12026', 2026)).toBe(10_000);
+  });
+
+  it('turns down the past, beyond the slider, and anything not a whole year', () => {
+    for (const text of ['2025', '102027', '', 'abc', '3000.5', '-3000', '3e3', '20 26']) {
+      expect(yearsAheadOf(text, 2026)).toBeNull();
+    }
   });
 });

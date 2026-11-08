@@ -61,6 +61,7 @@ interface UiState {
   readonly panel: Panel | null;
   readonly expandedRouteId: string | null;
   readonly hiddenRouteIds: readonly string[]; // this session's view, not part of the world
+  readonly chromeHidden: boolean; // every panel put away, leaving just the map
   readonly setFilters: (patch: Partial<StarFilters>) => void;
   readonly toggleClass: (cls: SpectralClass) => void;
   readonly toggleOverlay: (overlay: keyof Overlays) => void;
@@ -89,6 +90,7 @@ interface UiState {
   readonly togglePanel: (panel: Panel) => void;
   readonly showRoute: (routeId: string | null) => void;
   readonly toggleRouteHidden: (routeId: string) => void;
+  readonly setChromeHidden: (hidden: boolean) => void;
 }
 
 export const useUi = create<UiState>()((set) => ({
@@ -110,6 +112,7 @@ export const useUi = create<UiState>()((set) => ({
   panel: null,
   expandedRouteId: null,
   hiddenRouteIds: [],
+  chromeHidden: false,
   setFilters: (patch) => set((state) => ({ filters: { ...state.filters, ...patch } })),
   toggleClass: (cls) =>
     set((state) => {
@@ -206,4 +209,5 @@ export const useUi = create<UiState>()((set) => ({
         ? hiddenRouteIds.filter((id) => id !== routeId)
         : [...hiddenRouteIds, routeId],
     })),
+  setChromeHidden: (chromeHidden) => set({ chromeHidden }),
 }));

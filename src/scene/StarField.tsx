@@ -72,6 +72,59 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+// An Orton-style glow: under each star, a faint, wide, soft halo of its own colour. Alone, one is
+// barely there; where stars crowd together they add up into a gentle haze, the way a blurred copy
+// laid over a sharp photo blooms its bright parts. Only the stars glow, never the labels or lines.
+const GLOW_SCALE = 7; // halo diameter, in star sprites
+const GLOW_MAX_PX = 180;
+const GLOW_ALPHA = 0.01; // per halo at full strength, before it adds up
+// Fades in with the number of stars shown: none for a sparse map, full once it's crowded.
+const GLOW_FROM_STARS = 150;
+const GLOW_FULL_STARS = 900;
+
+function setGlowStrength(uniforms: { readonly uStrength: { value: number } }, stars: number): void {
+  uniforms.uStrength.value = MathUtils.smoothstep(stars, GLOW_FROM_STARS, GLOW_FULL_STARS);
+}
+
+const glowVertexShader = /* glsl */ `
+  attribute vec3 aColor;
+  attribute float aSize;
+  attribute float aFlags;
+  uniform float uPixelsPerLy;
+  uniform float uPixelRatio;
+  varying vec3 vColor;
+
+  void main() {
+    int flags = int(aFlags);
+    if ((flags & ${FLAG_VISIBLE}) == 0 || (flags & ${FLAG_SUN}) != 0) {
+      gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // outside the clip volume
+      gl_PointSize = 0.0;
+      return;
+    }
+    vColor = aColor;
+    vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * viewPosition;
+    float star = clamp(
+      aSize * uPixelsPerLy / -viewPosition.z,
+      ${MIN_POINT_PX.toFixed(1)} * uPixelRatio,
+      ${MAX_POINT_PX.toFixed(1)} * uPixelRatio
+    );
+    gl_PointSize = min(star * ${GLOW_SCALE.toFixed(1)}, ${GLOW_MAX_PX.toFixed(1)} * uPixelRatio);
+  }
+`;
+
+const glowFragmentShader = /* glsl */ `
+  uniform float uStrength;
+  varying vec3 vColor;
+
+  void main() {
+    float r = length(gl_PointCoord - 0.5) * 2.0;
+    if (r > 1.0) discard;
+    float falloff = exp(-r * r * 4.0) - exp(-4.0); // a Gaussian that reaches zero at the edge
+    gl_FragColor = vec4(vColor * falloff * uStrength * ${GLOW_ALPHA.toFixed(3)}, 1.0);
+  }
+`;
+
 interface ScaleUniforms {
   readonly uPixelsPerLy: { value: number };
   readonly uPixelRatio: { value: number };
@@ -117,6 +170,23 @@ export function StarField({ attributes, mask }: StarFieldProps) {
     [uniforms],
   );
 
+  const glowUniforms = useMemo(() => ({ ...uniforms, uStrength: { value: 0 } }), [uniforms]);
+  const glowMaterial = useMemo(
+    () =>
+      new ShaderMaterial({
+        vertexShader: glowVertexShader,
+        fragmentShader: glowFragmentShader,
+        uniforms: glowUniforms,
+        blending: AdditiveBlending,
+        transparent: true,
+        depthWrite: false,
+        depthTest: false,
+      }),
+    [glowUniforms],
+  );
+  const visibleStars = useMemo(() => mask.reduce((sum, shown) => sum + shown, 0), [mask]);
+  useEffect(() => setGlowStrength(glowUniforms, visibleStars), [glowUniforms, visibleStars]);
+
   // Filters only touch this attribute; the rest of the geometry is never rebuilt.
   useEffect(() => {
     writeStarFlags(flags, mask, attributes.sunIndex);
@@ -124,8 +194,15 @@ export function StarField({ attributes, mask }: StarFieldProps) {
 
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => material.dispose(), [material]);
+  useEffect(() => () => glowMaterial.dispose(), [glowMaterial]);
 
   useFrame(({ size, viewport }) => updateScale(uniforms, size.height, viewport.dpr));
 
-  return <points geometry={geometry} material={material} frustumCulled={false} renderOrder={1} />;
+  return (
+    <>
+      {/* Drawn first, so each star sits sharp on top of its own glow. */}
+      <points geometry={geometry} material={glowMaterial} frustumCulled={false} renderOrder={0} />
+      <points geometry={geometry} material={material} frustumCulled={false} renderOrder={1} />
+    </>
+  );
 }

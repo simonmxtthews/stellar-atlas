@@ -1,0 +1,8 @@
+<!-- The tab icon: the Stellar Atlas mark cut down for 16 px, on a dark tile for light tab bars. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#0d0e12"/>
+  <g color="#ecebe6" transform="translate(5.76 5.76) scale(0.82)">
+    <circle cx="22" cy="32" r="7" fill="currentColor"/>
+    <path d="M35.5 32L61 32M30.311 21.362L36.468 13.482M12.073 22.851L8.029 19.123M12.073 41.149L4.72 47.927M30.311 42.638L33.698 46.972" stroke="currentColor" stroke-width="5.4" stroke-linecap="round"/>
+  </g>
+</svg>

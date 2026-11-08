@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { distanceFromReference, revealFilters } from '../lib/filters';
 import { isTypingTarget } from '../lib/keys';
@@ -41,6 +42,8 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
       if (event.key !== '/' || event.ctrlKey || event.metaKey || event.altKey) return;
       if (isTypingTarget(event.target)) return;
       event.preventDefault();
+      // A hidden interface comes back first, as nothing hidden can take focus.
+      flushSync(() => useUi.getState().setChromeHidden(false));
       input.current?.focus();
     };
     window.addEventListener('keydown', onKeyDown);
@@ -89,7 +92,7 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
   };
 
   return (
-    <div className="absolute top-3 left-3 z-5 w-60 text-sm text-ink max-md:right-3 max-md:w-auto">
+    <div className="absolute top-3 left-3 z-5 w-64 lg:w-68 text-sm text-ink max-md:right-[3.75rem] max-md:w-auto">
       <input
         ref={input}
         type="search"
@@ -101,7 +104,8 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
         aria-activedescendant={open && results[active] ? `${listId}-${active}` : undefined}
         autoComplete="off"
         spellCheck={false}
-        placeholder="Search stars ( / )"
+        placeholder="Search stars"
+        aria-keyshortcuts="/"
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -110,8 +114,27 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         onKeyDown={onKeyDown}
-        className="w-full rounded-xl border border-line shadow-panel bg-panel px-3 py-2 backdrop-blur outline-none placeholder:text-faint focus:border-accent max-md:text-base"
+        className="peer w-full rounded-xl border border-line shadow-panel bg-panel py-2 pr-9 pl-9 backdrop-blur outline-none placeholder:text-faint focus:border-accent max-md:text-base"
       />
+      {/* Decoration over the input, so clicks go through to it. The key cap goes once it's in use. */}
+      <svg
+        aria-hidden
+        viewBox="0 0 16 16"
+        className="pointer-events-none absolute top-[0.6875rem] left-3 size-4 text-faint max-md:top-[0.8125rem]"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      >
+        <circle cx="7" cy="7" r="4.5" />
+        <path d="m10.5 10.5 3 3" />
+      </svg>
+      <kbd
+        aria-hidden
+        className="pointer-events-none absolute top-[0.6875rem] right-3 border-line text-faint peer-focus:hidden peer-[:not(:placeholder-shown)]:hidden max-md:hidden"
+      >
+        /
+      </kbd>
       <ul
         id={listId}
         role="listbox"

@@ -4,7 +4,7 @@ import { distanceLy, routeLegs, routeLengthLy } from '../lib/routes';
 import { formatValue } from '../lib/starFacts';
 import { formatTravelTime, routeTravelTime, systemTravelTime } from '../lib/travel';
 import type { Catalogue } from '../store/catalogue';
-import { useUi, type Panel } from '../store/ui';
+import { useUi, type Panel, type Tool } from '../store/ui';
 import { useWorld } from '../store/world';
 import { AboutPanel } from './AboutPanel';
 import { BUTTON_CLASS, PANEL_CLASS, QUIET_BUTTON_CLASS } from './controlStyles';
@@ -26,6 +26,42 @@ const PANELS: readonly (readonly [Panel, string, string])[] = [
   ['probes', 'Probes', 'Probes panel'],
   ['about', 'About', 'About panel'],
 ];
+
+// Each tool: its id, label, shortcut key and how to start it.
+const TOOLS: readonly (readonly [
+  Exclude<Tool, 'none'>,
+  string,
+  string,
+  (state: ReturnType<typeof useUi.getState>) => void,
+])[] = [
+  ['route', 'Route', 'R', (state) => state.startRoute()],
+  ['ruler', 'Ruler', 'M', (state) => state.startRuler()],
+  ['autoroute', 'Auto-route', 'A', (state) => state.startAutoRoute()],
+];
+
+// The row's buttons, all one height, so the row matches the search box beside it.
+// A touch tighter below 1280 px, so the row still fits on one line at 1024.
+const TOOL_BUTTON_CLASS = `${QUIET_BUTTON_CLASS} inline-flex h-7 items-center whitespace-nowrap max-xl:px-1.5`;
+const ICON_BUTTON_CLASS = `${QUIET_BUTTON_CLASS} grid h-7 w-7 place-items-center px-0`;
+const DIVIDER_CLASS = 'mx-1 h-4 w-px bg-line';
+
+function UndoIcon({ flipped = false }: { readonly flipped?: boolean }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 16 16"
+      className={`size-3.5 ${flipped ? '-scale-x-100' : ''}`}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5.5 3.5 2.5 6.5l3 3" />
+      <path d="M2.5 6.5h7a4 4 0 0 1 0 8H7" />
+    </svg>
+  );
+}
 
 function saveAutoRoute(path: readonly string[] | null): void {
   if (!path) return;
@@ -168,9 +204,6 @@ export function Toolbar({
 }) {
   const tool = useUi((state) => state.tool);
   const panel = useUi((state) => state.panel);
-  const startRoute = useUi((state) => state.startRoute);
-  const startRuler = useUi((state) => state.startRuler);
-  const startAutoRoute = useUi((state) => state.startAutoRoute);
   const endTool = useUi((state) => state.endTool);
   const togglePanel = useUi((state) => state.togglePanel);
   const undo = useWorld((state) => state.undo);
@@ -192,6 +225,8 @@ export function Toolbar({
       }
       if (event.altKey) return;
       const state = useUi.getState();
+      // The tools work through their banners, so starting one brings a hidden interface back.
+      if (key === 'r' || key === 'm' || key === 'a') state.setChromeHidden(false);
       if (key === 'r') {
         if (state.tool === 'route') state.endTool();
         else state.startRoute();
@@ -218,77 +253,90 @@ export function Toolbar({
   }, [catalogue, visibleSystems]);
 
   return (
-    <div className="absolute top-3 left-[16.5rem] z-5 flex max-h-[calc(100dvh-7.5rem)] w-96 flex-col gap-2 max-md:inset-x-3 max-md:top-14 max-md:max-h-[calc(100dvh-16rem)] max-md:w-auto">
+    // One row the height of the search box, from the rail's edge; panels and banners drop below it,
+    // level with the rail. Below 1024 px there isn't room, so it wraps into two.
+    <div className="absolute top-3 left-[17.5rem] z-5 flex max-h-[calc(100dvh-1.5rem)] w-[26rem] flex-col gap-3 lg:left-[18.5rem] lg:w-auto lg:max-w-[calc(100vw-22.5rem)] max-md:inset-x-3 max-md:top-[4.125rem] max-md:max-h-[calc(100dvh-16rem)] max-md:w-auto max-md:gap-2">
       <div
         role="toolbar"
         aria-label="World tools"
-        className={`${PANEL_CLASS} flex shrink-0 flex-wrap gap-0.5 p-1`}
+        className={`${PANEL_CLASS} flex shrink-0 flex-wrap items-center gap-0.5 self-start p-1 max-lg:self-stretch`}
       >
-        <button
-          type="button"
-          aria-pressed={tool === 'route'}
-          onClick={() => (tool === 'route' ? endTool() : startRoute())}
-          className={QUIET_BUTTON_CLASS}
-        >
-          Route (R)
-        </button>
-        <button
-          type="button"
-          aria-pressed={tool === 'ruler'}
-          onClick={() => (tool === 'ruler' ? endTool() : startRuler())}
-          className={QUIET_BUTTON_CLASS}
-        >
-          Ruler (M)
-        </button>
-        <button
-          type="button"
-          aria-pressed={tool === 'autoroute'}
-          onClick={() => (tool === 'autoroute' ? endTool() : startAutoRoute())}
-          className={QUIET_BUTTON_CLASS}
-        >
-          Auto-route (A)
-        </button>
-        <span className="ml-auto flex gap-0.5">
-          <button type="button" disabled={!canUndo} onClick={undo} className={QUIET_BUTTON_CLASS}>
-            Undo
+        {TOOLS.map(([id, label, key, start]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={tool === id}
+            aria-keyshortcuts={key}
+            title={`${label} (${key})`}
+            onClick={() => (tool === id ? endTool() : start(useUi.getState()))}
+            className={TOOL_BUTTON_CLASS}
+          >
+            {label}
+            <kbd aria-hidden className="ml-1.5 border-line text-faint">
+              {key}
+            </kbd>
           </button>
-          <button type="button" disabled={!canRedo} onClick={redo} className={QUIET_BUTTON_CLASS}>
-            Redo
-          </button>
-        </span>
-        <span aria-hidden className="basis-full border-t border-hairline" />
+        ))}
+        <span aria-hidden className={DIVIDER_CLASS} />
+        <button
+          type="button"
+          aria-label="Undo"
+          title="Undo (Ctrl+Z)"
+          aria-keyshortcuts="Control+Z"
+          disabled={!canUndo}
+          onClick={undo}
+          className={ICON_BUTTON_CLASS}
+        >
+          <UndoIcon />
+        </button>
+        <button
+          type="button"
+          aria-label="Redo"
+          title="Redo (Ctrl+Shift+Z)"
+          aria-keyshortcuts="Control+Shift+Z"
+          disabled={!canRedo}
+          onClick={redo}
+          className={ICON_BUTTON_CLASS}
+        >
+          <UndoIcon flipped />
+        </button>
+        <span aria-hidden className={`${DIVIDER_CLASS} max-lg:hidden`} />
+        <span aria-hidden className="basis-full border-t border-hairline lg:hidden" />
         {PANELS.map(([id, label]) => (
           <button
             key={id}
             type="button"
             aria-pressed={panel === id}
             onClick={() => togglePanel(id)}
-            className={QUIET_BUTTON_CLASS}
+            className={TOOL_BUTTON_CLASS}
           >
             {label}
           </button>
         ))}
       </div>
-      {tool === 'route' && <RouteBanner catalogue={catalogue} />}
-      {tool === 'ruler' && <RulerBanner catalogue={catalogue} />}
-      {tool === 'autoroute' && (
-        <AutoRouteBanner catalogue={catalogue} visibleSystems={visibleSystems} />
-      )}
-      {panel && (
-        <aside
-          aria-label={PANELS.find(([id]) => id === panel)?.[2]}
-          className={`${SURFACE_CLASS} min-h-0 overflow-y-auto max-md:max-h-[50dvh]`}
-        >
-          {panel === 'routes' && <RoutePanel catalogue={catalogue} />}
-          {panel === 'world' && <WorldPanel catalogue={catalogue} />}
-          {panel === 'drive' && <TravelCalculator />}
-          {panel === 'network' && (
-            <NetworkPanel catalogue={catalogue} visibleSystems={visibleSystems} />
-          )}
-          {panel === 'probes' && <ProbesPanel catalogue={catalogue} />}
-          {panel === 'about' && <AboutPanel meta={catalogue.meta} />}
-        </aside>
-      )}
+      {/* Banners and panels keep a readable width, however long the row above runs. */}
+      <div className="flex min-h-0 flex-col gap-3 lg:w-[26rem] max-md:gap-2">
+        {tool === 'route' && <RouteBanner catalogue={catalogue} />}
+        {tool === 'ruler' && <RulerBanner catalogue={catalogue} />}
+        {tool === 'autoroute' && (
+          <AutoRouteBanner catalogue={catalogue} visibleSystems={visibleSystems} />
+        )}
+        {panel && (
+          <aside
+            aria-label={PANELS.find(([id]) => id === panel)?.[2]}
+            className={`${SURFACE_CLASS} min-h-0 overflow-y-auto max-md:max-h-[50dvh]`}
+          >
+            {panel === 'routes' && <RoutePanel catalogue={catalogue} />}
+            {panel === 'world' && <WorldPanel catalogue={catalogue} />}
+            {panel === 'drive' && <TravelCalculator />}
+            {panel === 'network' && (
+              <NetworkPanel catalogue={catalogue} visibleSystems={visibleSystems} />
+            )}
+            {panel === 'probes' && <ProbesPanel catalogue={catalogue} />}
+            {panel === 'about' && <AboutPanel meta={catalogue.meta} />}
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
