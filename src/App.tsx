@@ -8,9 +8,10 @@ import { systemAnchors } from './scene/systemAnchors';
 import { useCatalogue, type Catalogue } from './store/catalogue';
 import { useUi } from './store/ui';
 import { useWorld } from './store/world';
-import { ChromeToggle } from './ui/ChromeToggle';
+import { CornerControls } from './ui/CornerControls';
 import { FilterPanel } from './ui/FilterPanel';
 import { SearchBar } from './ui/SearchBar';
+import { StarList } from './ui/StarList';
 import { StarModal } from './ui/StarModal';
 import { StarTooltip } from './ui/StarTooltip';
 import { Toolbar } from './ui/Toolbar';
@@ -78,8 +79,9 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
         <SearchBar catalogue={catalogue} />
       </div>
       <StarTooltip catalogue={catalogue} />
+      <StarList catalogue={catalogue} />
       <StarModal catalogue={catalogue} />
-      <ChromeToggle />
+      <CornerControls shown={visible.stars} />
     </>
   );
 }

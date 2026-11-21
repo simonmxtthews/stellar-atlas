@@ -92,7 +92,7 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
   };
 
   return (
-    <div className="absolute top-3 left-3 z-5 w-64 lg:w-68 text-sm text-ink max-md:right-[3.75rem] max-md:w-auto">
+    <div className="absolute top-3 left-3 z-5 w-64 lg:w-68 text-sm text-ink max-md:right-[calc(var(--corner-w)+1.25rem)] max-md:w-auto">
       <input
         ref={input}
         type="search"

@@ -3,7 +3,7 @@ import { isTypingTarget } from '../lib/keys';
 import { useUi } from '../store/ui';
 
 // Puts every panel away, or brings them back, so the map can be explored on its own. It stays in
-// the top-right corner either way, as the one way back.
+// the top-right corner either way, beside the star count, as the one way back.
 export function ChromeToggle() {
   const hidden = useUi((state) => state.chromeHidden);
   const setHidden = useUi((state) => state.setChromeHidden);
@@ -27,7 +27,7 @@ export function ChromeToggle() {
       title={label}
       aria-pressed={hidden}
       onClick={() => setHidden(!hidden)}
-      className={`absolute top-3 right-3 z-30 grid size-[2.375rem] place-items-center rounded-xl border border-line bg-panel text-ink-soft shadow-panel backdrop-blur transition-[color,background-color,opacity] hover:bg-raised hover:text-ink max-md:size-[2.625rem] ${
+      className={`grid size-[2.375rem] place-items-center rounded-xl border border-line bg-panel text-ink-soft shadow-panel backdrop-blur transition-[color,background-color,opacity] hover:bg-raised hover:text-ink max-md:size-[2.625rem] ${
         hidden ? 'opacity-60 hover:opacity-100 focus-visible:opacity-100' : ''
       }`}
     >

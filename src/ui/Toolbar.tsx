@@ -254,12 +254,12 @@ export function Toolbar({
 
   return (
     // One row the height of the search box, from the rail's edge; panels and banners drop below it,
-    // level with the rail. Below 1024 px there isn't room, so it wraps into two.
-    <div className="absolute top-3 left-[17.5rem] z-5 flex max-h-[calc(100dvh-1.5rem)] w-[26rem] flex-col gap-3 lg:left-[18.5rem] lg:w-auto lg:max-w-[calc(100vw-22.5rem)] max-md:inset-x-3 max-md:top-[4.125rem] max-md:max-h-[calc(100dvh-16rem)] max-md:w-auto max-md:gap-2">
+    // level with the rail. Below 1088 px, beside the star count, there isn't room, so it wraps into two.
+    <div className="absolute top-3 left-[17.5rem] z-5 flex max-h-[calc(100dvh-1.5rem)] w-[min(26rem,calc(100vw-var(--corner-w)-19rem))] flex-col gap-3 lg:left-[18.5rem] min-[68rem]:w-auto lg:max-w-[calc(100vw-var(--corner-w)-20.125rem)] max-md:inset-x-3 max-md:top-[4.125rem] max-md:max-h-[calc(100dvh-16rem)] max-md:w-auto max-md:gap-2">
       <div
         role="toolbar"
         aria-label="World tools"
-        className={`${PANEL_CLASS} flex shrink-0 flex-wrap items-center gap-0.5 self-start p-1 max-lg:self-stretch`}
+        className={`${PANEL_CLASS} flex shrink-0 flex-wrap items-center gap-0.5 self-start p-1 max-[68rem]:self-stretch`}
       >
         {TOOLS.map(([id, label, key, start]) => (
           <button
@@ -300,8 +300,8 @@ export function Toolbar({
         >
           <UndoIcon flipped />
         </button>
-        <span aria-hidden className={`${DIVIDER_CLASS} max-lg:hidden`} />
-        <span aria-hidden className="basis-full border-t border-hairline lg:hidden" />
+        <span aria-hidden className={`${DIVIDER_CLASS} max-[68rem]:hidden`} />
+        <span aria-hidden className="basis-full border-t border-hairline min-[68rem]:hidden" />
         {PANELS.map(([id, label]) => (
           <button
             key={id}

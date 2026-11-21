@@ -62,6 +62,9 @@ interface UiState {
   readonly expandedRouteId: string | null;
   readonly hiddenRouteIds: readonly string[]; // this session's view, not part of the world
   readonly chromeHidden: boolean; // every panel put away, leaving just the map
+  readonly starsInFrame: number; // shown stars inside the camera's view, kept live by the scene
+  readonly starListOpen: boolean;
+  readonly framedStarIndices: readonly number[]; // which ones, into the catalogue; live while the list is open
   readonly setFilters: (patch: Partial<StarFilters>) => void;
   readonly toggleClass: (cls: SpectralClass) => void;
   readonly toggleOverlay: (overlay: keyof Overlays) => void;
@@ -91,6 +94,9 @@ interface UiState {
   readonly showRoute: (routeId: string | null) => void;
   readonly toggleRouteHidden: (routeId: string) => void;
   readonly setChromeHidden: (hidden: boolean) => void;
+  readonly setStarsInFrame: (count: number) => void;
+  readonly setStarListOpen: (open: boolean) => void;
+  readonly setFramedStarIndices: (indices: readonly number[]) => void;
 }
 
 export const useUi = create<UiState>()((set) => ({
@@ -113,6 +119,9 @@ export const useUi = create<UiState>()((set) => ({
   expandedRouteId: null,
   hiddenRouteIds: [],
   chromeHidden: false,
+  starsInFrame: 0,
+  starListOpen: false,
+  framedStarIndices: [],
   setFilters: (patch) => set((state) => ({ filters: { ...state.filters, ...patch } })),
   toggleClass: (cls) =>
     set((state) => {
@@ -210,4 +219,7 @@ export const useUi = create<UiState>()((set) => ({
         : [...hiddenRouteIds, routeId],
     })),
   setChromeHidden: (chromeHidden) => set({ chromeHidden }),
+  setStarsInFrame: (starsInFrame) => set({ starsInFrame }),
+  setStarListOpen: (starListOpen) => set({ starListOpen }),
+  setFramedStarIndices: (framedStarIndices) => set({ framedStarIndices }),
 }));
