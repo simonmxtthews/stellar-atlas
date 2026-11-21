@@ -144,9 +144,12 @@ export function StarPointer({ stars, positions, mask }: StarPointerProps) {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || isTypingTarget(event.target)) return;
-      const { tool, endTool, detail, closeDetail, clearSelection } = useUi.getState();
+      const { tool, endTool, detail, closeDetail, starListOpen, setStarListOpen, clearSelection } =
+        useUi.getState();
       if (tool !== 'none') endTool();
-      else if (detail) closeDetail();
+      else if (detail)
+        closeDetail(); // back to the star list, if it's open
+      else if (starListOpen) setStarListOpen(false);
       else clearSelection();
     };
 

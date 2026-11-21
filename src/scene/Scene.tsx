@@ -15,6 +15,7 @@ import { Routes } from './Routes';
 import { SPACE_COLOR, WARN_COLOR } from '../lib/palette';
 import { buildStarAttributes } from './starAttributes';
 import { StarField } from './StarField';
+import { StarsInFrame } from './StarsInFrame';
 import { StarPointer } from './StarPointer';
 import type { SystemAnchor } from './systemAnchors';
 import { useMapShift, useMapYears } from './useMapShift';
@@ -70,6 +71,7 @@ export function Scene({
       <Grid positions={attributes.positions} mask={mask} center={referencePos} />
       <JumpNetwork systems={visibleSystems} systemsById={systemsById} />
       <StarField attributes={attributes} mask={mask} />
+      <StarsInFrame positions={attributes.positions} mask={mask} />
       <Routes catalogue={catalogue} visibleSystems={visibleSystems} />
       <RangeSpheres catalogue={catalogue} />
       <Beacons beacons={referenceBeacons} />

@@ -8,7 +8,7 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 
   --color-*: initial;
-  --color-space: #0d0e12;
+  --color-space: #0a0b0e;
   --color-panel: rgb(20 21 27 / 0.86);
   --color-field: #0f1015;
   --color-raised: #262832;
@@ -30,6 +30,8 @@
 
 :root {
   color-scheme: dark;
+  /* The top-right star count and interface toggle, measured live by CornerControls. */
+  --corner-w: 8.125rem;
   scrollbar-color: var(--color-line-strong) transparent;
   scrollbar-width: thin;
 }

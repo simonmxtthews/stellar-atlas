@@ -1480,6 +1480,12 @@ test('the interface toggle hides every panel and brings them back as they were',
   // The toggle itself stays, as the way back.
   await expect(show).toBeVisible();
   await expect(show).toHaveAttribute('aria-pressed', 'true');
+  // So does the count of stars in view.
+  await expect(page.getByTestId('stars-in-frame')).toBeVisible();
+  await expect(page.getByTestId('stars-in-frame')).toHaveAttribute(
+    'aria-label',
+    /^[\d,]+ of [\d,]+ shown stars in view$/,
+  );
 
   await page.keyboard.press('u');
   await expect(hide).toBeVisible();
@@ -1498,4 +1504,42 @@ test('the interface toggle hides every panel and brings them back as they were',
   await page.keyboard.press('u');
   await page.keyboard.press('/');
   await expect(search).toBeFocused();
+});
+
+test('the star count opens a sortable, paged list of the stars on screen', async ({ page }) => {
+  await openMap(page);
+  const count = page.getByTestId('stars-in-frame');
+  const list = page.getByRole('complementary', { name: 'Stars in view' });
+  const rows = list.getByTestId('star-list-row');
+  const distances = async () => (await rows.locator('td:nth-child(3)').allInnerTexts()).map(Number);
+
+  await count.click();
+  await expect(count).toHaveAttribute('aria-expanded', 'true');
+  await expect(list).toBeVisible();
+  await expect(rows).toHaveCount(50);
+  // Closest first, Sol at the top.
+  await expect(rows.first()).toContainText('Sol');
+  const nearest = await distances();
+  expect(nearest).toEqual([...nearest].sort((a, b) => a - b));
+
+  await list.getByRole('button', { name: 'Dist.' }).click();
+  await expect(list.getByRole('columnheader', { name: 'Dist.' })).toHaveAttribute(
+    'aria-sort',
+    'descending',
+  );
+  const furthest = await distances();
+  expect(furthest).toEqual([...furthest].sort((a, b) => b - a));
+
+  await list.getByRole('button', { name: 'Next page' }).click();
+  await expect(list.getByTestId('star-list-range')).toHaveText(/^51–100 of /);
+
+  // A row opens the star in its place; Esc steps back to the list, then closes it.
+  await rows.first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await expect(list).toBeHidden();
+  await page.keyboard.press('Escape');
+  await expect(list).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(list).toHaveCount(0);
+  await expect(count).toHaveAttribute('aria-expanded', 'false');
 });
