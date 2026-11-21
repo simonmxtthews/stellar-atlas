@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "data": "tsx scripts/build-data.ts",
+    "og": "tsx scripts/build-og.ts",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",

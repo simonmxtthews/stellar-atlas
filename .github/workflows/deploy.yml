@@ -24,10 +24,12 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - id: pages
+        uses: actions/configure-pages@v6
       - run: npm run build
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
-      - uses: actions/configure-pages@v6
+          SITE_URL: ${{ steps.pages.outputs.base_url }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
