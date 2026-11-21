@@ -7,6 +7,7 @@ Static, local-first web app that maps every known star system near the Sun in tr
 | Command            | What it does                                                                      |
 | ------------------ | --------------------------------------------------------------------------------- |
 | `npm run data`     | Bake the catalogue into `public/data/`                                            |
+| `npm run og`       | Render the link preview: `public/og-image.png` and `public/og-video.mp4` (ffmpeg) |
 | `npm run dev`      | Start the Vite dev server                                                         |
 | `npm run build`    | Type-check and build to `dist/`                                                   |
 | `npm run preview`  | Serve the built `dist/` locally                                                   |
