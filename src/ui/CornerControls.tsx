@@ -1,11 +1,18 @@
 import { useLayoutEffect, useRef } from 'react';
+import type { Catalogue } from '../store/catalogue';
 import { ChromeToggle } from './ChromeToggle';
 import { StarCount } from './StarCount';
 
 // The star count and interface toggle, in the top-right corner. The count is as wide as its number,
 // so the cluster publishes its width as --corner-w for the toolbar and the phone's search box to
 // keep clear of.
-export function CornerControls({ shown }: { readonly shown: number }) {
+export function CornerControls({
+  catalogue,
+  shown,
+}: {
+  readonly catalogue: Catalogue;
+  readonly shown: number;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const element = ref.current;
@@ -22,7 +29,7 @@ export function CornerControls({ shown }: { readonly shown: number }) {
   }, []);
   return (
     <div ref={ref} className="absolute top-3 right-3 z-30 flex gap-2">
-      <StarCount shown={shown} />
+      <StarCount catalogue={catalogue} shown={shown} />
       <ChromeToggle />
     </div>
   );

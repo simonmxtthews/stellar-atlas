@@ -1,14 +1,20 @@
 import type { SpectralClass, Star, StarSystem } from '../types/catalogue';
+import type { PlanetTrait } from './exoplanets';
 import { distanceLy } from './routes';
 
 export const SOL_ID = 'hyg:0';
 export const MIN_RADIUS_LY = 5;
 export const MAX_RADIUS_LY = 100;
 
+// Which systems to show by their known exoplanets. Rocky and gas each take systems that have the
+// other kind as well; any also takes those whose planets have no known kind. Habitable takes those
+// with a rocky planet in the habitable zone.
+export type PlanetFilter = 'all' | 'any' | 'rocky' | 'gas' | 'both' | 'habitable' | 'none';
+
 export interface StarFilters {
   readonly radiusLy: number;
   readonly hiddenClasses: readonly SpectralClass[];
-  readonly hasPlanets: boolean;
+  readonly planets: PlanetFilter;
   readonly multipleOnly: boolean;
   readonly taggedOnly: boolean;
 }
@@ -16,10 +22,32 @@ export interface StarFilters {
 export const DEFAULT_FILTERS: StarFilters = {
   radiusLy: 50,
   hiddenClasses: [],
-  hasPlanets: false,
+  planets: 'all',
   multipleOnly: false,
   taggedOnly: false,
 };
+
+const NO_TRAITS: ReadonlySet<PlanetTrait> = new Set();
+
+export function matchesPlanetFilter(
+  traits: ReadonlySet<PlanetTrait> | undefined = NO_TRAITS,
+  filter: PlanetFilter,
+): boolean {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'any':
+      return traits.size > 0;
+    case 'rocky':
+    case 'gas':
+    case 'habitable':
+      return traits.has(filter);
+    case 'both':
+      return traits.has('rocky') && traits.has('gas');
+    case 'none':
+      return traits.size === 0;
+  }
+}
 
 // Distances in the UI run from the reference star. Sol's use the catalogue's own figure.
 export function distanceFromReference(star: Star, reference: Star | undefined): number {
@@ -30,6 +58,7 @@ export function distanceFromReference(star: Star, reference: Star | undefined): 
 export function computeVisibleMask(
   stars: readonly Star[],
   systemsById: ReadonlyMap<string, StarSystem>,
+  traitsBySystem: ReadonlyMap<string, ReadonlySet<PlanetTrait>>,
   filters: StarFilters,
   taggedStarIds: ReadonlySet<string> = new Set(),
   reference?: Star,
@@ -42,7 +71,7 @@ export function computeVisibleMask(
       star.id === SOL_ID ||
       (distanceFromReference(star, reference) <= filters.radiusLy &&
         !hidden.has(star.spectral.cls) &&
-        (!filters.hasPlanets || (system?.planetCount ?? 0) > 0) &&
+        matchesPlanetFilter(traitsBySystem.get(star.systemId), filters.planets) &&
         (!filters.multipleOnly || (system?.starIds.length ?? 0) > 1) &&
         (!filters.taggedOnly || taggedStarIds.has(star.id)));
     mask[i] = visible ? 1 : 0;
@@ -54,6 +83,7 @@ export function computeVisibleMask(
 export function revealFilters(
   star: Star,
   system: StarSystem,
+  traits: ReadonlySet<PlanetTrait> | undefined,
   filters: StarFilters,
   tagged = false,
   reference?: Star,
@@ -62,7 +92,7 @@ export function revealFilters(
   return {
     radiusLy: Math.max(filters.radiusLy, Math.ceil(distanceFromReference(star, reference))),
     hiddenClasses: filters.hiddenClasses.filter((cls) => cls !== star.spectral.cls),
-    hasPlanets: filters.hasPlanets && system.planetCount > 0,
+    planets: matchesPlanetFilter(traits, filters.planets) ? filters.planets : 'all',
     multipleOnly: filters.multipleOnly && system.starIds.length > 1,
     taggedOnly: filters.taggedOnly && tagged,
   };

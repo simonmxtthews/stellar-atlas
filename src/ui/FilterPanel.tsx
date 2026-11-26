@@ -1,5 +1,11 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { DEFAULT_FILTERS, MAX_RADIUS_LY, MIN_RADIUS_LY, SOL_ID } from '../lib/filters';
+import {
+  DEFAULT_FILTERS,
+  MAX_RADIUS_LY,
+  MIN_RADIUS_LY,
+  SOL_ID,
+  type PlanetFilter,
+} from '../lib/filters';
 import { DEFAULT_OVERLAYS, useUi, type Overlays } from '../store/ui';
 import type { SpectralClass, Star } from '../types/catalogue';
 import { Logo } from './Logo';
@@ -26,6 +32,16 @@ const CLASS_LABELS: readonly (readonly [SpectralClass, string, string])[] = [
   ['Y', 'Y brown dwarf', '#8a5a9e'],
   ['D', 'D white dwarf', '#e8eeff'],
   ['unknown', 'Unknown', '#c8c8c8'],
+];
+
+const PLANET_LABELS: readonly (readonly [PlanetFilter, string])[] = [
+  ['all', 'Show all'],
+  ['any', 'Any exoplanets'],
+  ['rocky', 'Rocky exoplanets'],
+  ['gas', 'Gas exoplanets'],
+  ['both', 'Both rocky and gas'],
+  ['habitable', 'Potentially habitable'],
+  ['none', 'No known exoplanets'],
 ];
 
 const OVERLAY_LABELS: readonly (readonly [keyof Overlays, string])[] = [
@@ -241,15 +257,38 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
           </Section>
 
           <Section
+            title="Exoplanets"
+            reset={
+              <ResetButton
+                name="exoplanet filter"
+                to="show all"
+                isDefault={filters.planets === DEFAULT_FILTERS.planets}
+                onReset={() => setFilters({ planets: DEFAULT_FILTERS.planets })}
+              />
+            }
+          >
+            {PLANET_LABELS.map(([planets, label]) => (
+              <label key={planets} className="flex cursor-pointer items-center gap-2 py-0.5">
+                <input
+                  type="radio"
+                  name="planet-filter"
+                  checked={filters.planets === planets}
+                  onChange={() => setFilters({ planets })}
+                />
+                {label}
+              </label>
+            ))}
+          </Section>
+
+          <Section
             title="Systems"
             reset={
               <ResetButton
                 name="system filters"
                 to="show all"
-                isDefault={!filters.hasPlanets && !filters.multipleOnly && !filters.taggedOnly}
+                isDefault={!filters.multipleOnly && !filters.taggedOnly}
                 onReset={() =>
                   setFilters({
-                    hasPlanets: DEFAULT_FILTERS.hasPlanets,
                     multipleOnly: DEFAULT_FILTERS.multipleOnly,
                     taggedOnly: DEFAULT_FILTERS.taggedOnly,
                   })
@@ -257,11 +296,6 @@ export function FilterPanel({ stars, visible }: FilterPanelProps) {
               />
             }
           >
-            <Check
-              label="Has planets"
-              checked={filters.hasPlanets}
-              onChange={() => setFilters({ hasPlanets: !filters.hasPlanets })}
-            />
             <Check
               label="Multiple systems only"
               checked={filters.multipleOnly}

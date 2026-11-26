@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
 import { CAMERA_FAR, CAMERA_FOV, CAMERA_NEAR, HOME_POSITION } from './lib/camera';
+import { planetTraitsBySystem } from './lib/exoplanets';
 import { computeVisibleMask, countVisible } from './lib/filters';
 import { taggedStarIds } from './lib/worldView';
 import { Scene } from './scene/Scene';
@@ -48,9 +49,21 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
     () => (filters.taggedOnly ? taggedStarIds(starMeta) : NO_STARS),
     [filters.taggedOnly, starMeta],
   );
+  const traitsBySystem = useMemo(
+    () => planetTraitsBySystem(catalogue.stars, catalogue.planetsById),
+    [catalogue],
+  );
   const mask = useMemo(
-    () => computeVisibleMask(catalogue.stars, catalogue.systemsById, filters, tagged, reference),
-    [catalogue, filters, reference, tagged],
+    () =>
+      computeVisibleMask(
+        catalogue.stars,
+        catalogue.systemsById,
+        traitsBySystem,
+        filters,
+        tagged,
+        reference,
+      ),
+    [catalogue, filters, traitsBySystem, reference, tagged],
   );
   const anchors = useMemo(
     () => systemAnchors(catalogue.systems, catalogue.starIndexById, mask),
@@ -76,12 +89,12 @@ function Map({ catalogue }: { readonly catalogue: Catalogue }) {
           <FilterPanel stars={catalogue.stars} visible={visible} />
         </div>
         <Toolbar catalogue={catalogue} visibleSystems={visibleSystems} />
-        <SearchBar catalogue={catalogue} />
+        <SearchBar catalogue={catalogue} traitsBySystem={traitsBySystem} />
       </div>
       <StarTooltip catalogue={catalogue} />
       <StarList catalogue={catalogue} />
       <StarModal catalogue={catalogue} />
-      <CornerControls shown={visible.stars} />
+      <CornerControls catalogue={catalogue} shown={visible.stars} />
     </>
   );
 }

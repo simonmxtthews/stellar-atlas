@@ -12,7 +12,7 @@ function sameIndices(a: readonly number[], b: readonly number[]): boolean {
 }
 
 // Counts the shown stars on screen each frame, for the count in the corner, and while the star list
-// is open, which ones. Draws nothing. A few thousand projections a frame is cheap; the store only
+// is open or the count is hovered, which ones. Draws nothing. A few thousand projections a frame is cheap; the store only
 // hears about it when something changes.
 export function StarsInFrame({
   positions,
@@ -29,7 +29,8 @@ export function StarsInFrame({
     viewProjection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     const state = useUi.getState();
     const now = performance.now();
-    const listing = state.starListOpen && now - listedAt.current >= LIST_EVERY_MS;
+    const wanted = state.starListOpen || state.starCountHovered;
+    const listing = wanted && now - listedAt.current >= LIST_EVERY_MS;
     const indices = listing ? [] : undefined;
     const count = countInFrame(positions, mask, viewProjection.elements, indices);
     if (state.starsInFrame !== count) state.setStarsInFrame(count);

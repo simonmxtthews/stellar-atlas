@@ -1,5 +1,6 @@
 import { flushSync } from 'react-dom';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import type { PlanetTrait } from '../lib/exoplanets';
 import { distanceFromReference, revealFilters } from '../lib/filters';
 import { isTypingTarget } from '../lib/keys';
 import { createStarSearch, searchStars, withWorldNames, type StarSearch } from '../lib/search';
@@ -22,7 +23,13 @@ function whenIdle(work: () => void): () => void {
   return () => window.cancelIdleCallback(handle);
 }
 
-export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
+export function SearchBar({
+  catalogue,
+  traitsBySystem,
+}: {
+  readonly catalogue: Catalogue;
+  readonly traitsBySystem: ReadonlyMap<string, ReadonlySet<PlanetTrait>>;
+}) {
   const input = useRef<HTMLInputElement>(null);
   const activeOption = useRef<HTMLLIElement>(null);
   const listId = useId();
@@ -70,7 +77,10 @@ export function SearchBar({ catalogue }: { readonly catalogue: Catalogue }) {
     const { filters, setFilters, select, flyToStar } = useUi.getState();
     const system = catalogue.systemsById.get(star.systemId);
     const tagged = (starMeta[star.id]?.tagIds.length ?? 0) > 0;
-    if (system) setFilters(revealFilters(star, system, filters, tagged, reference));
+    if (system) {
+      const traits = traitsBySystem.get(system.id);
+      setFilters(revealFilters(star, system, traits, filters, tagged, reference));
+    }
     select(star.systemId, star.id);
     flyToStar(star.id);
     finish();

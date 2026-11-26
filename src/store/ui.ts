@@ -64,7 +64,8 @@ interface UiState {
   readonly chromeHidden: boolean; // every panel put away, leaving just the map
   readonly starsInFrame: number; // shown stars inside the camera's view, kept live by the scene
   readonly starListOpen: boolean;
-  readonly framedStarIndices: readonly number[]; // which ones, into the catalogue; live while the list is open
+  readonly starCountHovered: boolean;
+  readonly framedStarIndices: readonly number[]; // which ones, into the catalogue; live while the list is open or the count hovered
   readonly setFilters: (patch: Partial<StarFilters>) => void;
   readonly toggleClass: (cls: SpectralClass) => void;
   readonly toggleOverlay: (overlay: keyof Overlays) => void;
@@ -96,6 +97,7 @@ interface UiState {
   readonly setChromeHidden: (hidden: boolean) => void;
   readonly setStarsInFrame: (count: number) => void;
   readonly setStarListOpen: (open: boolean) => void;
+  readonly setStarCountHovered: (hovered: boolean) => void;
   readonly setFramedStarIndices: (indices: readonly number[]) => void;
 }
 
@@ -121,6 +123,7 @@ export const useUi = create<UiState>()((set) => ({
   chromeHidden: false,
   starsInFrame: 0,
   starListOpen: false,
+  starCountHovered: false,
   framedStarIndices: [],
   setFilters: (patch) => set((state) => ({ filters: { ...state.filters, ...patch } })),
   toggleClass: (cls) =>
@@ -221,5 +224,6 @@ export const useUi = create<UiState>()((set) => ({
   setChromeHidden: (chromeHidden) => set({ chromeHidden }),
   setStarsInFrame: (starsInFrame) => set({ starsInFrame }),
   setStarListOpen: (starListOpen) => set({ starListOpen }),
+  setStarCountHovered: (starCountHovered) => set({ starCountHovered }),
   setFramedStarIndices: (framedStarIndices) => set({ framedStarIndices }),
 }));

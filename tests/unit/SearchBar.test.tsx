@@ -36,7 +36,7 @@ const catalogue: Catalogue = {
 const initialUi = useUi.getState();
 
 async function renderBar(): Promise<HTMLInputElement> {
-  render(<SearchBar catalogue={catalogue} />);
+  render(<SearchBar catalogue={catalogue} traitsBySystem={new Map()} />);
   // The index builds when idle.
   await act(() => new Promise((done) => setTimeout(done, 5)));
   return screen.getByRole<HTMLInputElement>('combobox');
