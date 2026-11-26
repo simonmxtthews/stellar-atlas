@@ -5,7 +5,10 @@ import {
   DEFAULT_FILTERS,
   distanceFromReference,
   revealFilters,
+  matchesPlanetFilter,
+  type PlanetFilter,
 } from '../../../src/lib/filters';
+import type { PlanetTrait } from '../../../src/lib/exoplanets';
 import { sol, starOf, systemOf } from './fixtures';
 
 const near = starOf({ id: 'hyg:1', distLy: 10, spectral: { cls: 'M' } });
@@ -20,13 +23,18 @@ const companion = starOf({
 const stars = [sol, near, atEdge, far, companion];
 const systemsById = new Map([
   [sol.systemId, systemOf(sol)],
-  [near.systemId, systemOf(near, { starIds: [near.id, companion.id], planetCount: 0 })],
-  [atEdge.systemId, systemOf(atEdge, { planetCount: 2 })],
+  [near.systemId, systemOf(near, { starIds: [near.id, companion.id] })],
+  [atEdge.systemId, systemOf(atEdge)],
   [far.systemId, systemOf(far)],
 ]);
+const noTraits: ReadonlyMap<string, ReadonlySet<PlanetTrait>> = new Map();
+const traitsBySystem = new Map([[atEdge.systemId, new Set<PlanetTrait>(['rocky'])]]);
 
 function visibleIds(filters = {}): string[] {
-  const mask = computeVisibleMask(stars, systemsById, { ...DEFAULT_FILTERS, ...filters });
+  const mask = computeVisibleMask(stars, systemsById, traitsBySystem, {
+    ...DEFAULT_FILTERS,
+    ...filters,
+  });
   return stars.filter((_, i) => mask[i]).map((star) => star.id);
 }
 
@@ -42,12 +50,15 @@ describe('computeVisibleMask', () => {
   });
 
   it('keeps Sol whatever the filters say', () => {
-    const filters = { hiddenClasses: ['G'], hasPlanets: true, multipleOnly: true };
+    const filters = { hiddenClasses: ['G'], planets: 'both', multipleOnly: true };
     expect(visibleIds(filters)).toContain('hyg:0');
   });
 
   it('filters by the planets of the whole system', () => {
-    expect(visibleIds({ hasPlanets: true })).toEqual(['hyg:0', 'hyg:2']);
+    expect(visibleIds({ planets: 'any' })).toEqual(['hyg:0', 'hyg:2']);
+    expect(visibleIds({ planets: 'rocky' })).toEqual(['hyg:0', 'hyg:2']);
+    expect(visibleIds({ planets: 'gas' })).toEqual(['hyg:0']);
+    expect(visibleIds({ planets: 'none' })).toEqual(['hyg:0', 'hyg:1', 'hyg:4']);
   });
 
   it('filters to multiple systems', () => {
@@ -55,9 +66,25 @@ describe('computeVisibleMask', () => {
   });
 });
 
+describe('matchesPlanetFilter', () => {
+  it.each<[string, PlanetTrait[], PlanetFilter[]]>([
+    ['no planets', [], ['all', 'none']],
+    ['only rocky', ['rocky'], ['all', 'any', 'rocky']],
+    ['habitable', ['rocky', 'habitable'], ['all', 'any', 'rocky', 'habitable']],
+    ['only gas', ['gas'], ['all', 'any', 'gas']],
+    ['both', ['rocky', 'gas'], ['all', 'any', 'rocky', 'gas', 'both']],
+    ['only unclassified', ['unknown'], ['all', 'any']],
+  ])('%s', (_, kinds, matching) => {
+    const filters: PlanetFilter[] = ['all', 'any', 'rocky', 'gas', 'both', 'habitable', 'none'];
+    expect(filters.filter((filter) => matchesPlanetFilter(new Set(kinds), filter))).toEqual(
+      matching,
+    );
+  });
+});
+
 describe('countVisible', () => {
   it('counts visible stars and their distinct systems', () => {
-    const mask = computeVisibleMask(stars, systemsById, DEFAULT_FILTERS);
+    const mask = computeVisibleMask(stars, systemsById, noTraits, DEFAULT_FILTERS);
     expect(countVisible(stars, mask)).toEqual({ stars: 4, systems: 3 });
   });
 });
@@ -67,7 +94,9 @@ describe('computeVisibleMask with tags', () => {
     const stars = [starOf({ id: 'hyg:0' }), starOf({ id: 'a' }), starOf({ id: 'b' })];
     const systems = new Map(stars.map((star) => [star.systemId, systemOf(star)]));
     const filters = { ...DEFAULT_FILTERS, taggedOnly: true };
-    expect([...computeVisibleMask(stars, systems, filters, new Set(['b']))]).toEqual([1, 0, 1]);
+    expect([...computeVisibleMask(stars, systems, noTraits, filters, new Set(['b']))]).toEqual([
+      1, 0, 1,
+    ]);
   });
 });
 
@@ -75,45 +104,47 @@ describe('revealFilters', () => {
   it('drops taggedOnly for an untagged star, and keeps it for a tagged one', () => {
     const star = starOf({ id: 'a' });
     const filters = { ...DEFAULT_FILTERS, taggedOnly: true };
-    expect(revealFilters(star, systemOf(star), filters).taggedOnly).toBe(false);
-    expect(revealFilters(star, systemOf(star), filters, true).taggedOnly).toBe(true);
+    expect(revealFilters(star, systemOf(star), undefined, filters).taggedOnly).toBe(false);
+    expect(revealFilters(star, systemOf(star), undefined, filters, true).taggedOnly).toBe(true);
   });
 
   const far = starOf({ id: 'hyg:9', distLy: 80.2, spectral: { cls: 'M' } });
 
   it('leaves filters alone when the star already shows', () => {
     const near = starOf({ id: 'hyg:8', distLy: 10 });
-    expect(revealFilters(near, systemOf(near), DEFAULT_FILTERS)).toEqual(DEFAULT_FILTERS);
+    expect(revealFilters(near, systemOf(near), undefined, DEFAULT_FILTERS)).toEqual(
+      DEFAULT_FILTERS,
+    );
   });
 
   it('widens the radius, rounding up, and never shrinks it', () => {
-    expect(revealFilters(far, systemOf(far), DEFAULT_FILTERS).radiusLy).toBe(81);
+    expect(revealFilters(far, systemOf(far), undefined, DEFAULT_FILTERS).radiusLy).toBe(81);
     const wide = { ...DEFAULT_FILTERS, radiusLy: 90 };
-    expect(revealFilters(far, systemOf(far), wide).radiusLy).toBe(90);
+    expect(revealFilters(far, systemOf(far), undefined, wide).radiusLy).toBe(90);
   });
 
   it('unhides only the class of the star', () => {
     const filters = { ...DEFAULT_FILTERS, hiddenClasses: ['M', 'K'] as const };
-    expect(revealFilters(far, systemOf(far), filters).hiddenClasses).toEqual(['K']);
+    expect(revealFilters(far, systemOf(far), undefined, filters).hiddenClasses).toEqual(['K']);
   });
 
   it('drops only the system filters the star fails', () => {
-    const filters = { ...DEFAULT_FILTERS, hasPlanets: true, multipleOnly: true };
-    const host = systemOf(far, { planetCount: 2 });
-    expect(revealFilters(far, host, filters)).toMatchObject({
-      hasPlanets: true,
+    const filters = { ...DEFAULT_FILTERS, planets: 'rocky' as const, multipleOnly: true };
+    const host = systemOf(far);
+    expect(revealFilters(far, host, new Set(['rocky', 'gas']), filters)).toMatchObject({
+      planets: 'rocky',
       multipleOnly: false,
     });
     const binary = systemOf(far, { starIds: ['hyg:9', 'hyg:10'] });
-    expect(revealFilters(far, binary, filters)).toMatchObject({
-      hasPlanets: false,
+    expect(revealFilters(far, binary, undefined, filters)).toMatchObject({
+      planets: 'all',
       multipleOnly: true,
     });
   });
 
   it('never changes filters for Sol, which always shows', () => {
-    const filters = { ...DEFAULT_FILTERS, hiddenClasses: ['G'] as const, hasPlanets: true };
-    expect(revealFilters(sol, systemOf(sol), filters)).toBe(filters);
+    const filters = { ...DEFAULT_FILTERS, hiddenClasses: ['G'] as const, planets: 'both' as const };
+    expect(revealFilters(sol, systemOf(sol), undefined, filters)).toBe(filters);
   });
 });
 
@@ -134,15 +165,24 @@ describe('reference star', () => {
   });
 
   it('centres the radius on the reference, keeping Sol as the landmark', () => {
-    expect([...computeVisibleMask(stars, byId, filters)]).toEqual([1, 1, 0]);
-    expect([...computeVisibleMask(stars, byId, filters, new Set(), far)]).toEqual([1, 0, 1]);
+    expect([...computeVisibleMask(stars, byId, noTraits, filters)]).toEqual([1, 1, 0]);
+    expect([...computeVisibleMask(stars, byId, noTraits, filters, new Set(), far)]).toEqual([
+      1, 0, 1,
+    ]);
     expect([
-      ...computeVisibleMask(stars, byId, { ...filters, radiusLy: 5 }, new Set(), far),
+      ...computeVisibleMask(stars, byId, noTraits, { ...filters, radiusLy: 5 }, new Set(), far),
     ]).toEqual([1, 0, 1]);
   });
 
   it('widens to reveal a star by its distance from the reference', () => {
-    const revealed = revealFilters(far, systemOf(far), { ...filters, radiusLy: 5 }, false, near);
+    const revealed = revealFilters(
+      far,
+      systemOf(far),
+      undefined,
+      { ...filters, radiusLy: 5 },
+      false,
+      near,
+    );
     expect(revealed.radiusLy).toBe(40);
   });
 });

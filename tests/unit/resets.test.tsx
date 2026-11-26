@@ -43,7 +43,7 @@ describe('the map controls', () => {
     useUi.getState().setFilters({
       radiusLy: 20,
       hiddenClasses: ['M'],
-      hasPlanets: true,
+      planets: 'rocky',
       taggedOnly: true,
     });
     render(<FilterPanel stars={[sol]} visible={visible} />);
@@ -51,7 +51,9 @@ describe('the map controls', () => {
     fireEvent.click(button(/Reset radius/));
     expect(useUi.getState().filters).toMatchObject({ radiusLy: 50, hiddenClasses: ['M'] });
     fireEvent.click(button(/Reset spectral classes/));
-    expect(useUi.getState().filters).toMatchObject({ hiddenClasses: [], hasPlanets: true });
+    expect(useUi.getState().filters).toMatchObject({ hiddenClasses: [], planets: 'rocky' });
+    fireEvent.click(button(/Reset exoplanet filter/));
+    expect(useUi.getState().filters).toMatchObject({ planets: 'all', taggedOnly: true });
     fireEvent.click(button(/Reset system filters/));
     expect(useUi.getState().filters).toEqual(DEFAULT_FILTERS);
   });

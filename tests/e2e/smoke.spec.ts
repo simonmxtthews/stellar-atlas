@@ -384,7 +384,7 @@ test('dragging off a star orbits without selecting', async ({ page }) => {
 test('the modal lists a host star: facts, planets, HZ strip and neighbours', async ({ page }) => {
   await openMap(page);
   await showControls(page);
-  await page.getByLabel('Has planets').check();
+  await page.getByLabel('Any exoplanets').check();
   await hideControlsOnPhone(page);
   const hosts = new Set(stars.filter((s) => s.planetIds.length > 0).map((s) => s.systemId));
   const { star, x, y } = isolatedStar(
@@ -414,7 +414,7 @@ test('the modal lists a host star: facts, planets, HZ strip and neighbours', asy
   );
 });
 
-test('the Sun lists its own planets, and survives the has-planets filter', async ({ page }) => {
+test('the Sun lists its own planets, and survives the exoplanet filter', async ({ page }) => {
   await openMap(page);
   await page.getByRole('combobox', { name: 'Search stars' }).fill('Sol');
   await page.keyboard.press('Enter');
@@ -429,7 +429,7 @@ test('the Sun lists its own planets, and survives the has-planets filter', async
   await page.keyboard.press('Escape');
   await showControls(page);
   const before = await visibleStars(page);
-  await page.getByLabel('Has planets').check();
+  await page.getByLabel('Any exoplanets').check();
   expect(await visibleStars(page)).toBeLessThan(before);
   await page.getByRole('combobox', { name: 'Search stars' }).fill('Sol');
   await page.keyboard.press('Enter');
@@ -1325,10 +1325,11 @@ test('every setting resets to its default, and a reset of the world can be undon
   await resetOf(/^Reset spectral classes/).click();
   await expect(page.getByLabel('M', { exact: true })).toBeChecked();
   await expect(page.getByLabel('K', { exact: true })).toBeChecked();
-  await page.getByLabel('Has planets').check();
+  await page.getByLabel('Rocky exoplanets').check();
+  await resetOf(/^Reset exoplanet filter/).click();
+  await expect(page.getByLabel('Rocky exoplanets')).not.toBeChecked();
   await page.getByLabel('Multiple systems only').check();
   await resetOf(/^Reset system filters/).click();
-  await expect(page.getByLabel('Has planets')).not.toBeChecked();
   await expect(page.getByLabel('Multiple systems only')).not.toBeChecked();
   await hideControlsOnPhone(page);
 
@@ -1542,4 +1543,75 @@ test('the star count opens a sortable, paged list of the stars on screen', async
   await page.keyboard.press('Escape');
   await expect(list).toHaveCount(0);
   await expect(count).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('resting the mouse on the star count sums up the exoplanets in view', async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, 'A touch has no hover');
+  await openMap(page);
+  const count = page.getByTestId('stars-in-frame');
+  const summary = page.getByTestId('star-count-summary');
+  const number = async (label: string) => {
+    const row = summary.locator('dl > div').filter({ hasText: label });
+    return Number((await row.locator('dd').innerText()).replaceAll(',', ''));
+  };
+
+  await count.hover();
+  await expect(summary).toHaveCount(0); // not until it has rested there
+  await expect(summary).toBeVisible();
+  const inView = /^[\d,]+/.exec((await count.getAttribute('aria-label')) ?? '')?.[0];
+  expect(await number('Stars')).toBe(Number(inView?.replaceAll(',', '')));
+  const total = await number('Exoplanets');
+  const unclassified = (await summary.getByText('Unclassified').count())
+    ? await number('Unclassified')
+    : 0;
+  expect(total).toBeGreaterThan(0);
+  expect((await number('Rocky')) + (await number('Gas')) + unclassified).toBe(total);
+  const [button, box] = [await count.boundingBox(), await summary.boundingBox()];
+  expect(box?.y).toBeGreaterThan((button?.y ?? 0) + (button?.height ?? 0));
+
+  // Clicking makes way for the list; moving off closes the summary too.
+  await count.click();
+  await expect(summary).toHaveCount(0);
+  await page.mouse.move(400, 500);
+  await count.hover();
+  await expect(summary).toBeVisible();
+  await page.mouse.move(400, 500);
+  await expect(summary).toHaveCount(0);
+});
+
+test('the exoplanet filter picks out systems by the kinds of planet they have', async ({
+  page,
+}) => {
+  await openMap(page);
+  await showControls(page);
+  const all = await visibleStars(page);
+  const shown = async (label: string) => {
+    await page.getByRole('radio', { name: label, exact: true }).check();
+    return (await visibleStars(page)) - 1; // Sol always shows
+  };
+  const any = await shown('Any exoplanets');
+  const rocky = await shown('Rocky exoplanets');
+  const gas = await shown('Gas exoplanets');
+  const both = await shown('Both rocky and gas');
+  const habitable = await shown('Potentially habitable');
+  const none = await shown('No known exoplanets');
+  expect(any + none).toBe(all - 1);
+  expect(both).toBeGreaterThan(0);
+  expect(rocky).toBeGreaterThan(both);
+  expect(habitable).toBeGreaterThan(0);
+  expect(habitable).toBeLessThan(rocky);
+  expect(gas).toBeGreaterThan(rocky);
+  // Every rocky or gas system has planets; the rest have only unclassified ones.
+  expect(rocky + gas - both).toBeLessThanOrEqual(any);
+  // Proxima b is rocky and in its star's habitable zone.
+  await page.getByRole('radio', { name: 'Potentially habitable' }).check();
+  await page.getByRole('combobox', { name: 'Search stars' }).fill('Proxima Centauri');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('radio', { name: 'Potentially habitable' })).toBeChecked();
+  await page.keyboard.press('Escape');
+  await page.getByRole('radio', { name: 'Show all' }).check();
+  expect(await visibleStars(page)).toBe(all);
 });
